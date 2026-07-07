@@ -14,8 +14,8 @@ const navItems = [
       { label: 'AI Interview Sim', path: '/services/interview', desc: 'Real-time telemetry mock sessions' }
     ]
   },
-  { label: 'Coding', path: '/coding-questions' },
   { label: 'About', path: '/about' },
+  { label: 'Dashboard', path: '/dashboard' },
 ];
 
 function Navbar() {
