@@ -1,19 +1,52 @@
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link , useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import imgLogin from '../assets/hero.jpg'
+import api from '../utils/api'
+
 
 const Login = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: '', password: '' });
+
+  // State systems from backend API for session management and error handling can be integrated here
+
+  const [isLoading , setIsLoading] = useState(false);
+  const [errorMessage , setErrorMessage] = useState('');
+  const [successMessage , setSuccessMessage] = useState('');
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if(errorMessage) setErrorMessage('');
   };
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    console.log("Session initiated with credentials:", formData);
+    setIsLoading(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    try{
+      const response = await api.post('auth/login' , {
+        email : formData.email,
+        password : formData.password
+      });
+
+      setSuccessMessage('respsone.data.message || "Login successful!"');
+
+      localStorage.setItem('user_instance' , JSON.stringify(response.data.user));
+
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
+    }
+    catch(error){
+      setErrorMessage(error.response?.data?.message || 'Login failed. Please try again.');
+    }
+    finally{
+      setIsLoading(false);
+    }
   };
 
   // Fixed to dynamically accept custom Y-axis keyframes

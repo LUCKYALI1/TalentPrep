@@ -9,6 +9,7 @@ import Practice from './pages/Practice'
 import FAQs from './pages/ProofAndFAQs'
 import Footer from './pages/Footer'
 import Login from './pages/Login'
+import Signup from './pages/Signup'
 
 // Layout Modules Shell Imports
 import LandingLayout from './layouts/LandingLayout'
@@ -50,7 +51,7 @@ function App() {
       <Route path="/coding-questions" element={<div className="p-8 text-white"><h1>Coding Questions Panel</h1></div>} />
       <Route path="/about" element={<div className="p-8 text-white"><h1>About Platform</h1></div>} />
       <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<div className="p-8 text-white"><h1>Signup Workspace</h1></div>} />
+      <Route path="/signup" element={<Signup />} />
       <Route path="/dashboard" element={<div className="p-8 text-white"><h1>User Profile Dashboard</h1></div>} />
 
       {/* 4. ERROR TELEMETRY FALLBACK */}
