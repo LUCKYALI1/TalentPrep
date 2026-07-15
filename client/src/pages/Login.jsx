@@ -27,20 +27,28 @@ const Login = () => {
     setErrorMessage('');
     setSuccessMessage('');
 
-    try{
-      const response = await api.post('auth/login' , {
-        email : formData.email,
-        password : formData.password
-      });
+   try {
+  const response = await api.post('auth/login', {
+    email: formData.email,
+    password: formData.password
+  });
 
-      setSuccessMessage('respsone.data.message || "Login successful!"');
+  // ❌ Puraana: setSuccessMessage('respsone.data.message || "Login successful!"');
+  //  Naya: Typos hataye aur actual data read kiya
+  setSuccessMessage(response.data?.message || "Login successful!");
 
-      localStorage.setItem('user_instance' , JSON.stringify(response.data.user));
+  // Token store karne ke liye check karein ki aapka backend response kya bhejta hai
+  // Agar response mein direct token hai ya response.data.token hai:
+  if (response.data?.token) {
+    localStorage.setItem('token', response.data.token);
+  }
 
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1500);
-    }
+  localStorage.setItem('user_instance', JSON.stringify(response.data?.user || response.data));
+
+  setTimeout(() => {
+    navigate('/dashboard');
+  }, 1500);
+}
     catch(error){
       setErrorMessage(error.response?.data?.message || 'Login failed. Please try again.');
     }

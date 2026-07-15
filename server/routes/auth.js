@@ -1,6 +1,6 @@
 import express from 'express';
 const router = express.Router();
-import User from '../models/User.js';
+import User from '../models/userModel.js';
 import generateTokenAndSetCookie from '../utils/generateToken.js';
 
 // ==========================================
@@ -52,18 +52,26 @@ router.post('/register', async (req, res) => {
 // ==========================================
 // AUTHENTICATION LOGIN ROUTE
 // ==========================================
+// ==========================================
+// AUTHENTICATION LOGIN ROUTE
+// ==========================================
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Find user by normalized email mapping
+        // ❌ Puraana: const user = await User.find(...)
+        //  Naya: findOne use kijiye taaki Single Document Object mile, Array nahi!
         const user = await User.findOne({ email: email.toLowerCase() });
+        
+        // Agar user null milta hai (yaani nahi mila)
         if (!user) {
             return res.status(401).json({ message: 'Invalid credentials provided', error: "Node mapping failed" });
         }
 
-        // Fixed: Adjusted from matchPassword to call your actual schema method: comparePassword
+        // Ab 'user' ek actual mongoose instance hai, toh comparePassword flawlessly chalega!
         const isMatch = await user.comparePassword(password);
+        console.log("Password Match Status:", isMatch); 
+        
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials provided', error: "Passkey verification mismatch" });
         }
