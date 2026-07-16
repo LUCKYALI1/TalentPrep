@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-
-let loggedIn = false; 
+import { useAuth } from '../context/auth/authContext'; // 🛡️ Import useAuth Context Hook
 
 const navItems = [
   { label: 'Home', path: '/' },
@@ -15,10 +14,12 @@ const navItems = [
     ]
   },
   { label: 'About', path: '/about' },
-  { label: 'Dashboard', path: '/dashboard' },
 ];
 
 function Navbar() {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth(); // ⚡ Extract global auth state and logout controller
+
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
@@ -34,6 +35,12 @@ function Navbar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleLogout = () => {
+    logout(); // Context level clear-out (clears localStorage & state)
+    setIsOpen(false);
+    navigate('/');
+  };
 
   // Modern Animation Variables matching global context
   const linkVariants = {
@@ -150,11 +157,23 @@ function Navbar() {
 
           {/* Desktop Authentication Systems Routing */}
           <div className="hidden md:flex items-center gap-4">
-            {loggedIn ? (
-              <Link to="/dashboard" className="text-zinc-300 hover:text-cyan-400 flex items-center gap-2 transition-colors duration-200 text-sm font-medium group">
-                <span className="h-5 w-5 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-mono flex items-center justify-center text-zinc-400 group-hover:border-cyan-500/50 group-hover:text-cyan-400 transition-colors">U</span>
-                Dashboard
-              </Link>
+            {user ? (
+              <div className="flex items-center gap-6">
+                {/* Profile Link with dynamic initial */}
+                <Link to="/dashboard" className="text-zinc-300 hover:text-cyan-400 flex items-center gap-2 transition-colors duration-200 text-sm font-medium group">
+                  <span className="h-5 w-5 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-mono flex items-center justify-center text-zinc-400 group-hover:border-cyan-500/50 group-hover:text-cyan-400 transition-colors">
+                    {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                  </span>
+                  Dashboard
+                </Link>
+                {/* Logout Button */}
+                <button 
+                  onClick={handleLogout}
+                  className="text-zinc-500 hover:text-red-400 transition-colors duration-200 text-xs font-mono tracking-wider cursor-pointer font-bold uppercase"
+                >
+                  Logout // Exit
+                </button>
+              </div>
             ) : (
               <>
                 <Link to="/login" className="text-zinc-400 hover:text-white transition-colors duration-200 text-sm font-medium px-3 py-2">
@@ -181,7 +200,7 @@ function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile Drawer Overlay Grid Layout */}
+      {/* Mobile Drawer Overlay */}
       <AnimatePresence>
         {isOpen && (
           <motion.div 
@@ -246,14 +265,28 @@ function Navbar() {
             <div className="h-[1px] bg-zinc-900 w-full" />
 
             {/* Mobile Authentication Deck System */}
-            <div onClick={() => setIsOpen(false)}>
-              {loggedIn ? (
-                <Link to="/dashboard" className="text-zinc-300 hover:text-cyan-400 flex items-center gap-3 py-2 px-3 text-base font-medium transition-colors rounded-xl hover:bg-white/5">
-                  <span className="h-5 w-5 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-mono flex items-center justify-center text-zinc-400">U</span>
-                  Dashboard
-                </Link>
+            <div>
+              {user ? (
+                <div className="flex flex-col gap-2">
+                  <Link 
+                    to="/dashboard" 
+                    onClick={() => setIsOpen(false)}
+                    className="text-zinc-300 hover:text-cyan-400 flex items-center gap-3 py-2.5 px-3 text-base font-medium transition-colors rounded-xl hover:bg-white/5"
+                  >
+                    <span className="h-5 w-5 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-mono flex items-center justify-center text-zinc-400">
+                      {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                    </span>
+                    Dashboard
+                  </Link>
+                  <button 
+                    onClick={handleLogout}
+                    className="text-left text-red-400 hover:text-red-300 flex items-center gap-3 py-2.5 px-3 text-base font-medium transition-colors rounded-xl hover:bg-white/5 w-full cursor-pointer font-mono text-xs uppercase font-bold"
+                  >
+                    Logout // Exit session ⚡
+                  </button>
+                </div>
               ) : (
-                <div className="flex flex-col gap-2.5">
+                <div className="flex flex-col gap-2.5" onClick={() => setIsOpen(false)}>
                   <Link to="/login" className="text-zinc-400 text-center py-2.5 rounded-xl text-sm font-medium hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all">
                     Login
                   </Link>

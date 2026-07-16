@@ -4,7 +4,7 @@ import User from '../models/userModel.js';
 import generateTokenAndSetCookie from '../utils/generateToken.js';
 
 // ==========================================
-// REGISTRATION ROUTE
+// REGISTRATION ROUTE 
 // ==========================================
 router.post('/register', async (req, res) => {
     try {
@@ -105,5 +105,30 @@ router.post('/logout', (req, res) => {
     });
     res.status(200).json({ message: 'Session disconnected successfully' });
 });
+router.get('/verify', async (req, res) => {
+  try {
+    // 1. Request headers se token nikalo
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
 
+    if (!token) {
+      return res.status(401).json({ message: 'No token, authorization denied' });
+    }
+
+    // 2. Token ko verify karo (JWT Secret key se)
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // 3. Database se user find karo (password chhod kar)
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // 4. Agar sab sahi hai, toh user object return karo
+    return res.status(200).json({ user });
+
+  } catch (error) {
+    return res.status(401).json({ message: 'Token is not valid' });
+  }
+});
 export default router;

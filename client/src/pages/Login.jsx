@@ -1,24 +1,23 @@
 import React, { useState } from 'react'
-import { Link , useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import imgLogin from '../assets/hero.jpg'
 import api from '../utils/api'
-
+import { useAuth } from '../context/auth/authContext' // 🛡️ Import useAuth Hook
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuth(); // ⚡ Global auth context controller extract kiya
+
   const [formData, setFormData] = useState({ email: '', password: '' });
-
-  // State systems from backend API for session management and error handling can be integrated here
-
-  const [isLoading , setIsLoading] = useState(false);
-  const [errorMessage , setErrorMessage] = useState('');
-  const [successMessage , setSuccessMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if(errorMessage) setErrorMessage('');
+    if (errorMessage) setErrorMessage('');
   };
 
   const handleLoginSubmit = async (e) => {
@@ -27,37 +26,33 @@ const Login = () => {
     setErrorMessage('');
     setSuccessMessage('');
 
-   try {
-  const response = await api.post('auth/login', {
-    email: formData.email,
-    password: formData.password
-  });
+    try {
+      const response = await api.post('auth/login', {
+        email: formData.email,
+        password: formData.password
+      });
 
-  // ❌ Puraana: setSuccessMessage('respsone.data.message || "Login successful!"');
-  //  Naya: Typos hataye aur actual data read kiya
-  setSuccessMessage(response.data?.message || "Login successful!");
+      // Response structures parsing
+      const token = response.data?.token;
+      const user = response.data?.user || response.data;
 
-  // Token store karne ke liye check karein ki aapka backend response kya bhejta hai
-  // Agar response mein direct token hai ya response.data.token hai:
-  if (response.data?.token) {
-    localStorage.setItem('token', response.data.token);
-  }
+      setSuccessMessage(response.data?.message || "Login successful! Synchronizing core session...");
 
-  localStorage.setItem('user_instance', JSON.stringify(response.data?.user || response.data));
+      // ⚡ GLOBAL STATE INITIALIZATION:
+      // Yeh context ke throw user details state save karega aur local storage sync manage karega
+      login(user, token);
 
-  setTimeout(() => {
-    navigate('/dashboard');
-  }, 1500);
-}
-    catch(error){
-      setErrorMessage(error.response?.data?.message || 'Login failed. Please try again.');
-    }
-    finally{
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
+
+    } catch (error) {
+      setErrorMessage(error.response?.data?.message || 'Handshake failed. Invalid passkey credentials.');
+    } finally {
       setIsLoading(false);
     }
   };
 
-  // Fixed to dynamically accept custom Y-axis keyframes
   const floatAnimation = (delay = 0, yRange = [-4, 4]) => ({
     y: yRange,
     transition: {
@@ -91,10 +86,8 @@ const Login = () => {
       <div className="relative z-10 w-full max-w-4xl bg-[#09090b]/90 border border-zinc-900 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md grid grid-cols-1 md:grid-cols-12 min-h-[520px]">
         
         {/* LEFT COLUMN: VISUAL DASHBOARD GRID PANEL */}
-        {/* Fixed the "m  d:col-span-5" space typo below */}
         <div className="hidden md:flex md:col-span-5 bg-zinc-950 border-r border-zinc-900/80 flex-col justify-between p-6 relative overflow-hidden group">
-          
-          <img src={imgLogin} alt="Login Background" className="absolute inset-0 z-0 object-cover opacity-15 pointer-events-none w-full h-full " />
+          <img src={imgLogin} alt="Login Background" className="absolute inset-0 z-0 object-cover opacity-15 pointer-events-none w-full h-full" />
           
           <div className="relative z-10">
             <div className="text-sm font-black text-white tracking-tight">
@@ -102,7 +95,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Interactive Floating Simulation Components */}
           <div className="relative z-10 space-y-4 my-auto">
             <motion.div 
               animate={floatAnimation(0)}
@@ -118,7 +110,7 @@ const Login = () => {
             </motion.div>
 
             <motion.div 
-              animate={floatAnimation(1.5, [4, -4])} // This now functions perfectly
+              animate={floatAnimation(1.5, [4, -4])} 
               className="bg-white/[0.02] border border-white/5 backdrop-blur-sm rounded-xl p-3 shadow-md text-left flex justify-between items-center"
             >
               <div className="space-y-0.5">
@@ -136,7 +128,7 @@ const Login = () => {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: CORE LOGIN INTERFACE FORM */}
+        {/* RIGHT COLUMN: CORE LOGIN FORM */}
         <div className="md:col-span-7 p-8 md:p-12 flex flex-col justify-center text-left bg-black/20">
           
           <div className="space-y-2 mb-8">
@@ -151,8 +143,23 @@ const Login = () => {
             </p>
           </div>
 
+          {/* ⚡ FEEDBACK MESSAGE DISPLAY CONTAINER */}
+          {(errorMessage || successMessage) && (
+            <div className="mb-5 text-xs font-mono">
+              {errorMessage && (
+                <div className="border border-red-950 bg-red-950/20 text-red-400 px-4 py-3 rounded-xl">
+                  ⚠️ [EXC_ERR]: {errorMessage}
+                </div>
+              )}
+              {successMessage && (
+                <div className="border border-emerald-950 bg-emerald-950/20 text-emerald-400 px-4 py-3 rounded-xl animate-pulse">
+                  🚀 [SUCCESS]: {successMessage}
+                </div>
+              )}
+            </div>
+          )}
+
           <form onSubmit={handleLoginSubmit} className="space-y-4">
-            
             <div className="space-y-1.5">
               <label className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider block">
                 Mail Routing Address
@@ -163,8 +170,9 @@ const Login = () => {
                 value={formData.email}
                 onChange={handleInputChange}
                 required
+                disabled={isLoading}
                 placeholder="ali@talentprep.ai" 
-                className="w-full bg-white/[0.02] border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 transition-colors duration-200" 
+                className="w-full bg-white/[0.02] border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 transition-colors duration-200 disabled:opacity-50" 
               />
             </div>
 
@@ -183,20 +191,28 @@ const Login = () => {
                 value={formData.password}
                 onChange={handleInputChange}
                 required
+                disabled={isLoading}
                 placeholder="••••••••••••" 
-                className="w-full bg-white/[0.02] border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-cyan-500/80 transition-colors duration-200" 
+                className="w-full bg-white/[0.02] border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-cyan-500/80 transition-colors duration-200 disabled:opacity-50" 
               />
             </div>
 
             <div className="pt-2">
-              {/* Wrapped native button with motion.button for satisfying tactical hover feedback */}
               <motion.button 
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
+                whileHover={{ scale: isLoading ? 1 : 1.01 }}
+                whileTap={{ scale: isLoading ? 1 : 0.99 }}
                 type="submit" 
-                className="w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 hover:opacity-95 text-white font-bold text-xs rounded-xl font-mono py-3.5 tracking-wider uppercase shadow-lg shadow-cyan-500/10 transition-opacity cursor-pointer"
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 text-white font-bold text-xs rounded-xl font-mono py-3.5 tracking-wider uppercase shadow-lg shadow-cyan-500/10 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Establish Session Key ⚡
+                {isLoading ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  "Establish Session Key ⚡"
+                )}
               </motion.button>
             </div>
           </form>
@@ -209,9 +225,7 @@ const Login = () => {
           </p>
 
         </div>
-
       </div>
-
     </section>
   )
 }
