@@ -1,10 +1,12 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth'; 
+import { useLastLocation } from '../hooks/useLastLocation'; // sahi path check kar lena
 
 
 const PublicRoute = ({ children }) => {
   const { user, loading } = useAuth();
+  const lastVisited = useLastLocation();
 
   // 1. Loading active matrix
   if (loading) {
@@ -17,7 +19,7 @@ const PublicRoute = ({ children }) => {
 
   // 2. Redirect: Agar user pehle se logged in hai, toh use /dashboard par redirect kar do
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={lastVisited} replace />;
   }
 
   return children;

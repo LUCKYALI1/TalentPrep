@@ -131,4 +131,5 @@ router.get('/verify', async (req, res) => {
     return res.status(401).json({ message: 'Token is not valid' });
   }
 });
+
 export default router;

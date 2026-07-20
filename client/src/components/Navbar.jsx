@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/auth/authContext'; // 🛡️ Import useAuth Context Hook
+// Component ke andar:
 
 const navItems = [
   { label: 'Home', path: '/' },
@@ -303,4 +304,7 @@ function Navbar() {
   );
 }
 
+
 export default Navbar;
+
+

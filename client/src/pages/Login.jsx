@@ -1,18 +1,22 @@
 import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate ,useLocation} from 'react-router-dom'
 import { motion } from 'framer-motion'
 import imgLogin from '../assets/hero.jpg'
 import api from '../utils/api'
-import { useAuth } from '../context/auth/authContext' // 🛡️ Import useAuth Hook
+import { useAuth } from '../context/auth/authContext' 
+
+
 
 const Login = () => {
-  const navigate = useNavigate();
+  const location = useLocation();
+  const navigate =  useNavigate();
   const { login } = useAuth(); // ⚡ Global auth context controller extract kiya
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const fromPath = location.state?.from;
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -43,7 +47,7 @@ const Login = () => {
       login(user, token);
 
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate(fromPath, { replace: true });
       }, 1500);
 
     } catch (error) {
