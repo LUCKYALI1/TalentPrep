@@ -1,0 +1,64 @@
+{
+  "interviewId": "INSTANT-FALLBACK-1785504850940",
+  "role": "MERN Full-Stack Developer",
+  "techStack": [
+    "React",
+    "Node.js",
+    "MongoDB"
+  ],
+  "yearOfExperience": 2,
+  "status": "IN_PROGRESS",
+  "createdAt": "2026-07-31T13:34:16.108Z",
+  "qaPairs": [
+    {
+      "id": 1,
+      "question": "⚠️ AI Tokens Exhausted / Server is busy.",
+      "answer": ""
+    },
+    {
+      "id": 2,
+      "question": "⏳ Please wait a few minutes while we restore the connection.",
+      "answer": ""
+    },
+    {
+      "id": 3,
+      "question": "In the meantime, could you tell us more about your recent projects?",
+      "answer": ""
+    },
+    {
+      "id": 4,
+      "question": "We are working on bringing the AI back online...",
+      "answer": ""
+    },
+    {
+      "id": 5,
+      "question": "...",
+      "answer": ""
+    },
+    {
+      "id": 6,
+      "question": "...",
+      "answer": ""
+    },
+    {
+      "id": 7,
+      "question": "...",
+      "answer": ""
+    },
+    {
+      "id": 8,
+      "question": "...",
+      "answer": ""
+    },
+    {
+      "id": 9,
+      "question": "...",
+      "answer": ""
+    },
+    {
+      "id": 10,
+      "question": "...",
+      "answer": ""
+    }
+  ]
+}

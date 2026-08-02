@@ -1,0 +1,64 @@
+{
+  "interviewId": "INSTANT-FALLBACK-1785504622108",
+  "role": "MERN Full-Stack Developer",
+  "techStack": [
+    "React",
+    "Node.js",
+    "MongoDB"
+  ],
+  "yearOfExperience": 2,
+  "status": "IN_PROGRESS",
+  "createdAt": "2026-07-31T13:30:26.601Z",
+  "qaPairs": [
+    {
+      "id": 1,
+      "question": "Fallback Q1: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 2,
+      "question": "Fallback Q2: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 3,
+      "question": "Fallback Q3: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 4,
+      "question": "Fallback Q4: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 5,
+      "question": "Fallback Q5: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 6,
+      "question": "Fallback Q6: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 7,
+      "question": "Fallback Q7: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 8,
+      "question": "Fallback Q8: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 9,
+      "question": "Fallback Q9: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 10,
+      "question": "Fallback Q10: Explain a core concept in your tech stack.",
+      "answer": ""
+    }
+  ]
+}

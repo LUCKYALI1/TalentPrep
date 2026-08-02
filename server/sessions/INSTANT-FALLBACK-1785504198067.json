@@ -1,0 +1,64 @@
+{
+  "interviewId": "INSTANT-FALLBACK-1785504198067",
+  "role": "MERN Full-Stack Developer",
+  "techStack": [
+    "React",
+    "Node.js",
+    "MongoDB"
+  ],
+  "yearOfExperience": 2,
+  "status": "IN_PROGRESS",
+  "createdAt": "2026-07-31T13:23:22.178Z",
+  "qaPairs": [
+    {
+      "id": 1,
+      "question": "Emergency Fallback Question 1: Explain a core concept in your tech stack.",
+      "answer": "Mujhe"
+    },
+    {
+      "id": 2,
+      "question": "Emergency Fallback Question 2: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 3,
+      "question": "Emergency Fallback Question 3: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 4,
+      "question": "Emergency Fallback Question 4: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 5,
+      "question": "Emergency Fallback Question 5: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 6,
+      "question": "Emergency Fallback Question 6: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 7,
+      "question": "Emergency Fallback Question 7: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 8,
+      "question": "Emergency Fallback Question 8: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 9,
+      "question": "Emergency Fallback Question 9: Explain a core concept in your tech stack.",
+      "answer": ""
+    },
+    {
+      "id": 10,
+      "question": "Emergency Fallback Question 10: Explain a core concept in your tech stack.",
+      "answer": ""
+    }
+  ]
+}

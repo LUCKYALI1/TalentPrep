@@ -1,0 +1,19 @@
+{
+  "interviewId": "INSTANT-FALLBACK-1785503827062",
+  "role": "MERN Full-Stack Developer",
+  "techStack": [
+    "React",
+    "Node.js",
+    "MongoDB"
+  ],
+  "yearOfExperience": 2,
+  "status": "IN_PROGRESS",
+  "createdAt": "2026-07-31T13:18:13.135Z",
+  "qaPairs": [
+    {
+      "id": 1,
+      "question": "What is the most challenging technical problem you have solved recently?",
+      "answer": ""
+    }
+  ]
+}
