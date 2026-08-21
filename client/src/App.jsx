@@ -42,6 +42,7 @@ const HomeRootScroll = () => {
 
 function App() {
   return (
+    
     <AuthProvider>
       <LastLocationProvider>
         <Navbar />

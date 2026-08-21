@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../context/auth/authContext'; // 🛡️ Import useAuth Context Hook
-// Component ke andar:
+import { useAuth } from '../context/auth/authContext';
 
 const navItems = [
   { label: 'Home', path: '/' },
@@ -17,16 +16,37 @@ const navItems = [
   { label: 'About', path: '/about' },
 ];
 
+// 🚀 Variants moved OUTSIDE component to prevent re-creation on every render
+const linkVariants = {
+  initial: { y: 0, scale: 1, color: 'rgba(241, 245, 249, 0.75)' },
+  hover: { y: -1, scale: 1.01, color: '#06B6D4' }
+};
+
+const lineVariants = {
+  initial: { width: '0%' },
+  hover: { width: '100%' }
+};
+
+const dropdownVariants = {
+  hidden: { opacity: 0, y: 10, scale: 0.95 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: { type: "spring", stiffness: 300, damping: 20 }
+  },
+  exit: { opacity: 0, y: 8, scale: 0.95, transition: { duration: 0.15 } }
+};
+
 function Navbar() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth(); // ⚡ Extract global auth state and logout controller
+  const { user, logout } = useAuth(); 
 
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Close desktop dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -38,45 +58,24 @@ function Navbar() {
   }, []);
 
   const handleLogout = () => {
-    logout(); // Context level clear-out (clears localStorage & state)
+    logout();
     setIsOpen(false);
     navigate('/');
   };
 
-  // Modern Animation Variables matching global context
-  const linkVariants = {
-    initial: { y: 0, scale: 1, color: 'rgba(241, 245, 249, 0.75)' },
-    hover: { y: -1, scale: 1.01, color: '#06B6D4' }
-  };
-
-  const lineVariants = {
-    initial: { width: '0%' },
-    hover: { width: '100%' }
-  };
-
-  const dropdownVariants = {
-    hidden: { opacity: 0, y: 10, scale: 0.95 },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
-      scale: 1,
-      transition: { type: "spring", stiffness: 300, damping: 20 }
-    },
-    exit: { opacity: 0, y: 8, scale: 0.95, transition: { duration: 0.15 } }
-  };
+  const userInitial = user?.email?.[0]?.toUpperCase() || 'U';
 
   return (
     <>
-      {/* Navbar Base Frame */}
       <nav className="fixed top-4 left-1/2 -translate-x-1/2 w-[92%] max-w-7xl bg-black backdrop-blur-xl rounded-2xl p-4 md:px-8 z-50 border border-zinc-800 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)]">
         <div className="container mx-auto flex items-center justify-between">
           
-          {/* Logo Frame */}
+          {/* Logo */}
           <Link to="/" className="text-xl font-black tracking-tight text-white select-none">
             Talent<span className="text-cyan-400">Prep</span>
           </Link>
           
-          {/* Desktop Links Deck */}
+          {/* Desktop Links */}
           <div className="hidden md:flex items-center"> 
             <ul className="flex items-center gap-8"> 
               {navItems.map((item, idx) => {
@@ -100,7 +99,7 @@ function Navbar() {
                         <span className={`text-[9px] font-mono transition-transform duration-200 ${showDropdown ? 'rotate-180 text-cyan-400' : 'text-zinc-500'}`}>▼</span>
                       </motion.div>
                       
-                      {/* Dropdown Container Submenu */}
+                      {/* Dropdown Menu */}
                       <AnimatePresence>
                         {showDropdown && (
                           <motion.div 
@@ -108,9 +107,9 @@ function Navbar() {
                             initial="hidden"
                             animate="visible"
                             exit="exit"
-                            className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-64 bg-[#09090b]/95 border border-zinc-800 rounded-xl p-2.5 shadow-2xl backdrop-blur-md"
+                            className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-64 z-50"
                           >
-                            <div className="space-y-1">
+                            <div className="bg-[#09090b]/95 border border-zinc-800 rounded-xl p-2.5 shadow-2xl backdrop-blur-md space-y-1">
                               {item.dropdown.map((subItem, sIdx) => (
                                 <Link
                                   key={sIdx}
@@ -156,18 +155,16 @@ function Navbar() {
             </ul>
           </div>
 
-          {/* Desktop Authentication Systems Routing */}
+          {/* Desktop Auth Section */}
           <div className="hidden md:flex items-center gap-4">
             {user ? (
               <div className="flex items-center gap-6">
-                {/* Profile Link with dynamic initial */}
                 <Link to="/dashboard" className="text-zinc-300 hover:text-cyan-400 flex items-center gap-2 transition-colors duration-200 text-sm font-medium group">
                   <span className="h-5 w-5 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-mono flex items-center justify-center text-zinc-400 group-hover:border-cyan-500/50 group-hover:text-cyan-400 transition-colors">
-                    {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                    {userInitial}
                   </span>
                   Dashboard
                 </Link>
-                {/* Logout Button */}
                 <button 
                   onClick={handleLogout}
                   className="text-zinc-500 hover:text-red-400 transition-colors duration-200 text-xs font-mono tracking-wider cursor-pointer font-bold uppercase"
@@ -187,7 +184,7 @@ function Navbar() {
             )}
           </div>
 
-          {/* Mobile Hamburg Trigger Toggle */}
+          {/* Mobile Toggle Button */}
           <div className="md:hidden flex items-center">
             <button 
               onClick={() => setIsOpen(!isOpen)} 
@@ -201,7 +198,7 @@ function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile Drawer Overlay */}
+      {/* Mobile Menu Drawer */}
       <AnimatePresence>
         {isOpen && (
           <motion.div 
@@ -224,7 +221,6 @@ function Navbar() {
                         <span className={`text-[10px] font-mono transition-transform duration-200 ${mobileDropdownOpen ? 'rotate-180 text-cyan-400' : 'text-zinc-500'}`}>▼</span>
                       </button>
                       
-                      {/* Mobile Dropdown Sublinks Stack */}
                       <AnimatePresence>
                         {mobileDropdownOpen && (
                           <motion.div
@@ -265,7 +261,7 @@ function Navbar() {
 
             <div className="h-[1px] bg-zinc-900 w-full" />
 
-            {/* Mobile Authentication Deck System */}
+            {/* Mobile Auth Section */}
             <div>
               {user ? (
                 <div className="flex flex-col gap-2">
@@ -275,7 +271,7 @@ function Navbar() {
                     className="text-zinc-300 hover:text-cyan-400 flex items-center gap-3 py-2.5 px-3 text-base font-medium transition-colors rounded-xl hover:bg-white/5"
                   >
                     <span className="h-5 w-5 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-mono flex items-center justify-center text-zinc-400">
-                      {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                      {userInitial}
                     </span>
                     Dashboard
                   </Link>
@@ -304,7 +300,4 @@ function Navbar() {
   );
 }
 
-
-export default Navbar;
-
-
+export default React.memo(Navbar);

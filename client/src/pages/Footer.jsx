@@ -1,35 +1,34 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+
+// 🚀 1. Static Grid Background Style
+const gridBackgroundStyle = {
+  backgroundImage: `
+    linear-gradient(to right, #3f3f46 1px, transparent 1px),
+    linear-gradient(to bottom, #3f3f46 1px, transparent 1px)
+  `,
+  backgroundSize: "32px 32px"
+};
+
+// 🚀 2. Static Links Data (Moved outside component scope)
+const QUICK_LINKS = [
+  { name: "Home", href: "#home" },
+  { name: "Practice", href: "#practice" },
+  { name: "Roadmaps", href: "#roadmaps" },
+  { name: "Resources", href: "#resources" },
+  { name: "About Us", href: "#about" }
+];
 
 const Footer = () => {
-  const quickLinks = [
-    { name: "Home", href: "#home" },
-    { name: "Practice", href: "#practice" },
-    { name: "Roadmaps", href: "#roadmaps" },
-    { name: "Resources", href: "#resources" },
-    { name: "About Us", href: "#about" }
-  ];
-
   return (
     <footer className="relative w-full bg-black text-white border-t border-zinc-900 px-4 sm:px-6 lg:px-8 py-12 overflow-hidden font-sans select-none">
       
-      {/* =========================================================
-          SAVED CONTEXT: BACKGROUND GRID MATRIX
-         ========================================================= */}
+      {/* Background Grid Matrix */}
       <div 
         className="absolute inset-0 z-0 opacity-10 pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, #3f3f46 1px, transparent 1px),
-            linear-gradient(to bottom, #3f3f46 1px, transparent 1px)
-          `,
-          backgroundSize: "32px 32px"
-        }}
+        style={gridBackgroundStyle}
       />
 
-      {/* =========================================================
-          MAIN 3-COLUMN STRUCTURAL DECK (Z-INDEX ASSIGNED AS z-10)
-         ========================================================= */}
+      {/* Main 3-Column Structural Deck */}
       <div className="relative z-10 max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
         
         {/* COLUMN 1: ABOUT COMPANY (5/12 Columns) */}
@@ -48,8 +47,8 @@ const Footer = () => {
             Navigation
           </span>
           <ul className="space-y-2 text-xs sm:text-[13px] text-zinc-400 font-medium">
-            {quickLinks.map((link, linkIdx) => (
-              <li key={linkIdx}>
+            {QUICK_LINKS.map((link) => (
+              <li key={link.name}>
                 <a 
                   href={link.href} 
                   className="hover:text-cyan-400 transition-colors duration-200 block w-fit"
@@ -84,4 +83,5 @@ const Footer = () => {
   )
 }
 
-export default Footer
+// 🚀 3. Wrapped Export with React.memo
+export default React.memo(Footer);
