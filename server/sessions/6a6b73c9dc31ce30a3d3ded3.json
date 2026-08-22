@@ -8,56 +8,56 @@
   ],
   "yearOfExperience": 2,
   "status": "IN_PROGRESS",
-  "createdAt": "2026-08-02T13:41:06.115Z",
+  "createdAt": "2026-08-22T15:46:36.109Z",
   "qaPairs": [
     {
       "id": 1,
-      "question": "How do you optimize a React component that re-renders unnecessarily when passing object or function props? Explain the practical differences between React.memo, useMemo, and useCallback.",
-      "answer": "what are the factor of react and non stick development"
+      "question": "In a React application, how would you design a custom hook to handle paginated API calls with debounced search functionality, and how do you prevent race conditions from out-of-order API responses?",
+      "answer": ""
     },
     {
       "id": 2,
-      "question": "In a real-world MERN application, when would you choose React Context API over a dedicated state management library like Redux or Zustand, and how do you prevent the re-render issue associated with Context?",
-      "answer": "increase caught execute in JavaScript"
+      "question": "Explain the practical difference between useMemo and useCallback. Can you share a scenario from your experience where misusing them actually degraded performance instead of improving it?",
+      "answer": ""
     },
     {
       "id": 3,
-      "question": "How would you design a custom React hook `useFetch` to handle API calls, including handling loading/error states, component unmount cleanup (abort controller), and race conditions?",
-      "answer": "how do you designs cable wasteful API in not Express"
+      "question": "When building a complex feature in React, how do you decide whether to use local component state, React Context API, or a global state library like Redux or Zustand? What are the performance trade-offs of Context API?",
+      "answer": ""
     },
     {
       "id": 4,
-      "question": "How does Express middleware execution order work, and how do you handle asynchronous errors in middleware to prevent unhandled promise rejections from crashing your Node process?",
+      "question": "How do you implement centralized error handling middleware in Express.js to gracefully handle both synchronous errors and unhandled asynchronous promise rejections?",
       "answer": ""
     },
     {
       "id": 5,
-      "question": "Explain how you would implement JWT-based authentication in a Node/Express app. What are the security tradeoffs between storing the token in localStorage versus an httpOnly cookie, and how do you mitigate XSS and CSRF?",
+      "question": "When implementing JWT-based authentication in a Node.js REST API, where should tokens ideally be stored on the client side to prevent XSS and CSRF attacks, and how would you implement a secure token refresh strategy?",
       "answer": ""
     },
     {
       "id": 6,
-      "question": "What is a MongoDB compound index, how does the prefix rule work, and how do you verify if a query is utilizing an index using `.explain()`?",
+      "question": "How does the Node.js event loop handle non-blocking I/O operations versus CPU-intensive tasks, and what strategy would you use to prevent a heavy CPU operation from blocking incoming HTTP requests?",
       "answer": ""
     },
     {
       "id": 7,
-      "question": "In MongoDB and Mongoose, compare using `.populate()` against using the Aggregation Pipeline `$lookup` stage in terms of performance and execution under the hood.",
+      "question": "In MongoDB, how do you decide between embedding sub-documents versus referencing another collection? Give an example where embedded documents become an anti-pattern due to document size limits or write performance.",
       "answer": ""
     },
     {
       "id": 8,
-      "question": "How would you implement server-side pagination, sorting, and filtering for a large dataset in an Express route querying a MongoDB collection?",
+      "question": "How do compound indexes work in MongoDB, and why does the field order in a compound index matter when executing queries with multiple filter criteria and sorting?",
       "answer": ""
     },
     {
       "id": 9,
-      "question": "What is CORS, why does a web browser trigger a preflight (OPTIONS) request, and how do you securely configure CORS in an Express production backend serving a React frontend?",
+      "question": "How would you implement a robust rate-limiting mechanism on an Express backend to protect critical endpoints (like login or password reset) from brute-force attacks?",
       "answer": ""
     },
     {
       "id": 10,
-      "question": "Explain the difference between `process.nextTick()`, `setImmediate()`, and microtasks (Promises) in the Node.js Event Loop, and how improper use of async operations can block the main thread.",
+      "question": "Walk me through how you would handle large file uploads from a React front-end through a Node.js backend to cloud storage like AWS S3 without overloading backend server memory.",
       "answer": ""
     }
   ]

@@ -1,49 +1,77 @@
-import React, { useState } from 'react'
-import { Link, useNavigate ,useLocation} from 'react-router-dom'
+import React, { useState, useCallback, useMemo } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
 import { motion } from 'framer-motion'
 import imgLogin from '../assets/hero.jpg'
 import api from '../utils/api'
 import { useAuth } from '../context/auth/authContext' 
 
+// ⚡ STATIC CONFIGS: Extracted outside component memory scope
+const GRID_BACKGROUND_STYLE = {
+  backgroundImage: `
+    linear-gradient(to right, #3f3f46 1px, transparent 1px),
+    linear-gradient(to bottom, #3f3f46 1px, transparent 1px)
+  `,
+  backgroundSize: "32px 32px"
+};
 
+const getFloatAnimation = (delay = 0, yRange = [-4, 4]) => ({
+  y: yRange,
+  transition: {
+    duration: 4,
+    repeat: Infinity,
+    repeatType: "reverse",
+    ease: "easeInOut",
+    delay: delay
+  }
+});
 
 const Login = () => {
   const location = useLocation();
-  const navigate =  useNavigate();
-  const { login } = useAuth(); // ⚡ Global auth context controller extract kiya
+  const navigate = useNavigate();
+  const { login } = useAuth(); 
 
-  const [formData, setFormData] = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const fromPath = location.state?.from;
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errorMessage) setErrorMessage('');
-  };
+  // ⚡ MEMOIZED PATH: Memoize fallback route
+  const fromPath = useMemo(() => location.state?.from || '/', [location.state?.from]);
 
-  const handleLoginSubmit = async (e) => {
-    e.preventDefault();
+  // ⚡ REACT HOOK FORM INTEGRATION
+  const {
+    register,
+    handleSubmit,
+    formState: { errors }
+  } = useForm({
+    defaultValues: {
+      email: '',
+      password: ''
+    },
+    mode: 'onTouched'
+  });
+
+  // ⚡ MEMOIZED ANIMATION VARIANTS
+  const floatAnim1 = useMemo(() => getFloatAnimation(0), []);
+  const floatAnim2 = useMemo(() => getFloatAnimation(1.5, [4, -4]), []);
+
+  // ⚡ MEMOIZED SUBMIT HANDLER
+  const handleLoginSubmit = useCallback(async (data) => {
     setIsLoading(true);
     setErrorMessage('');
     setSuccessMessage('');
 
     try {
       const response = await api.post('auth/login', {
-        email: formData.email,
-        password: formData.password
+        email: data.email,
+        password: data.password
       });
 
-      // Response structures parsing
       const token = response.data?.token;
       const user = response.data?.user || response.data;
 
       setSuccessMessage(response.data?.message || "Login successful! Synchronizing core session...");
 
-      // ⚡ GLOBAL STATE INITIALIZATION:
-      // Yeh context ke throw user details state save karega aur local storage sync manage karega
       login(user, token);
 
       setTimeout(() => {
@@ -55,18 +83,7 @@ const Login = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const floatAnimation = (delay = 0, yRange = [-4, 4]) => ({
-    y: yRange,
-    transition: {
-      duration: 4,
-      repeat: Infinity,
-      repeatType: "reverse",
-      ease: "easeInOut",
-      delay: delay
-    }
-  });
+  }, [login, navigate, fromPath]);
 
   return (
     <section id="login" className="relative w-full min-h-screen bg-black text-white flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans overflow-hidden select-none">
@@ -74,13 +91,7 @@ const Login = () => {
       {/* BACKGROUND MATRIX GRID */}
       <div 
         className="absolute inset-0 z-0 opacity-15 pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, #3f3f46 1px, transparent 1px),
-            linear-gradient(to bottom, #3f3f46 1px, transparent 1px)
-          `,
-          backgroundSize: "32px 32px"
-        }}
+        style={GRID_BACKGROUND_STYLE}
       />
 
       {/* AMBIENT GLOW */}
@@ -101,7 +112,7 @@ const Login = () => {
 
           <div className="relative z-10 space-y-4 my-auto">
             <motion.div 
-              animate={floatAnimation(0)}
+              animate={floatAnim1}
               className="bg-white/[0.03] border border-white/10 backdrop-blur-md rounded-xl p-4 shadow-xl text-left space-y-2 relative"
             >
               <div className="absolute top-2 right-2 text-[9px] font-mono text-zinc-600">[SYS_FEED]</div>
@@ -114,7 +125,7 @@ const Login = () => {
             </motion.div>
 
             <motion.div 
-              animate={floatAnimation(1.5, [4, -4])} 
+              animate={floatAnim2} 
               className="bg-white/[0.02] border border-white/5 backdrop-blur-sm rounded-xl p-3 shadow-md text-left flex justify-between items-center"
             >
               <div className="space-y-0.5">
@@ -147,7 +158,7 @@ const Login = () => {
             </p>
           </div>
 
-          {/* ⚡ FEEDBACK MESSAGE DISPLAY CONTAINER */}
+          {/* FEEDBACK MESSAGE DISPLAY CONTAINER */}
           {(errorMessage || successMessage) && (
             <div className="mb-5 text-xs font-mono">
               {errorMessage && (
@@ -163,21 +174,27 @@ const Login = () => {
             </div>
           )}
 
-          <form onSubmit={handleLoginSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit(handleLoginSubmit)} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider block">
                 Mail Routing Address
               </label>
               <input 
                 type="email" 
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                required
                 disabled={isLoading}
                 placeholder="ali@talentprep.ai" 
+                {...register("email", { 
+                  required: "Mail routing address is required", 
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: "Invalid email routing format"
+                  }
+                })}
                 className="w-full bg-white/[0.02] border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 transition-colors duration-200 disabled:opacity-50" 
               />
+              {errors.email && (
+                <p className="text-[10px] font-mono text-red-400 pt-0.5">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -191,14 +208,20 @@ const Login = () => {
               </div>
               <input 
                 type="password" 
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                required
                 disabled={isLoading}
                 placeholder="••••••••••••" 
+                {...register("password", { 
+                  required: "Passkey token is required",
+                  minLength: {
+                    value: 6,
+                    message: "Token must be at least 6 characters"
+                  }
+                })}
                 className="w-full bg-white/[0.02] border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-cyan-500/80 transition-colors duration-200 disabled:opacity-50" 
               />
+              {errors.password && (
+                <p className="text-[10px] font-mono text-red-400 pt-0.5">{errors.password.message}</p>
+              )}
             </div>
 
             <div className="pt-2">
@@ -234,4 +257,4 @@ const Login = () => {
   )
 }
 
-export default Login
+export default React.memo(Login)

@@ -1,45 +1,45 @@
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import imgSignup from '../assets/hero.jpg' // Reusing your layout asset
+import { useForm } from 'react-hook-form'
+import imgSignup from '../assets/hero.jpg'
 import api from '../utils/api'
 
+// Static float animation helper defined outside component body
+const floatAnimation = (delay = 0, yRange = [-4, 4]) => ({
+  y: yRange,
+  transition: {
+    duration: 4,
+    repeat: Infinity,
+    repeatType: "reverse",
+    ease: "easeInOut",
+    delay: delay
+  }
+});
+
 const Signup = () => {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    username: '',
-    email: '',
-    password: ''
+  const navigate = useNavigate();
+  const [apiError, setApiError] = useState('');
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting }
+  } = useForm({
+    mode: 'onTouched'
   });
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSignupSubmit = async (e) => {
-    e.preventDefault();
-    console.log("New node instance registration requested:", formData);
+  const handleSignupSubmit = async (data) => {
+    setApiError('');
     try {
-      const response = await api.post('auth/register', formData);
+      const response = await api.post('auth/register', data);
       console.log("Registration successful:", response.data);
-    }
-    catch (error) {
-      console.error("Registration failed:", error.response?.data?.message || error.message);
+      navigate('/login');
+    } catch (error) {
+      console.error("Registration failed:", error);
+      setApiError(error.response?.data?.message || "Registration failed. Please try again.");
     }
   };
-
-  const floatAnimation = (delay = 0, yRange = [-4, 4]) => ({
-    y: yRange,
-    transition: {
-      duration: 4,
-      repeat: Infinity,
-      repeatType: "reverse",
-      ease: "easeInOut",
-      delay: delay
-    }
-  });
 
   return (
     <section id="signup" className="relative pt-30 w-full min-h-screen bg-black text-white flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans overflow-hidden select-none">
@@ -65,7 +65,7 @@ const Signup = () => {
         {/* LEFT COLUMN: VISUAL DASHBOARD GRID PANEL */}
         <div className="hidden md:flex md:col-span-5 bg-zinc-950 border-r border-zinc-900/80 flex-col justify-between p-6 relative overflow-hidden group">
           
-          <img src={imgSignup} alt="Signup Background" className="absolute inset-0 z-0 object-cover opacity-15 pointer-events-none w-full h-full " />
+          <img src={imgSignup} alt="Signup Background" className="absolute inset-0 z-0 object-cover opacity-15 pointer-events-none w-full h-full" />
           
           <div className="relative z-10">
             <div className="text-sm font-black text-white tracking-tight">
@@ -122,7 +122,14 @@ const Signup = () => {
             </p>
           </div>
 
-          <form onSubmit={handleSignupSubmit} method='post' className="space-y-4">
+          {/* API ERROR ALERT */}
+          {apiError && (
+            <div className="mb-4 p-3 bg-red-950/40 border border-red-800/60 rounded-xl text-red-400 text-xs font-mono">
+              ⚠️ {apiError}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit(handleSignupSubmit)} className="space-y-4">
             
             {/* FIRST NAME & LAST NAME ROW */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -132,13 +139,11 @@ const Signup = () => {
                 </label>
                 <input 
                   type="text" 
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleInputChange}
-                  required
                   placeholder="Alan" 
-                  className="w-full bg-white/[0.02] border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 transition-colors duration-200" 
+                  {...register("firstName", { required: "First name is required" })}
+                  className={`w-full bg-white/[0.02] border ${errors.firstName ? 'border-red-500 focus:border-red-500' : 'border-zinc-800 focus:border-cyan-500/80'} rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-600 focus:outline-none transition-colors duration-200`} 
                 />
+                {errors.firstName && <p className="text-[10px] text-red-400 font-mono mt-1">{errors.firstName.message}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -147,13 +152,11 @@ const Signup = () => {
                 </label>
                 <input 
                   type="text" 
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleInputChange}
-                  required
                   placeholder="Turing" 
-                  className="w-full bg-white/[0.02] border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 transition-colors duration-200" 
+                  {...register("lastName", { required: "Last name is required" })}
+                  className={`w-full bg-white/[0.02] border ${errors.lastName ? 'border-red-500 focus:border-red-500' : 'border-zinc-800 focus:border-cyan-500/80'} rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-600 focus:outline-none transition-colors duration-200`} 
                 />
+                {errors.lastName && <p className="text-[10px] text-red-400 font-mono mt-1">{errors.lastName.message}</p>}
               </div>
             </div>
 
@@ -164,13 +167,14 @@ const Signup = () => {
               </label>
               <input 
                 type="text" 
-                name="username"
-                value={formData.username}
-                onChange={handleInputChange}
-                required
                 placeholder="turing_machine" 
-                className="w-full bg-white/[0.02] border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 transition-colors duration-200" 
+                {...register("username", { 
+                  required: "Username is required",
+                  minLength: { value: 3, message: "Username must be at least 3 characters" }
+                })}
+                className={`w-full bg-white/[0.02] border ${errors.username ? 'border-red-500 focus:border-red-500' : 'border-zinc-800 focus:border-cyan-500/80'} rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-600 focus:outline-none transition-colors duration-200`} 
               />
+              {errors.username && <p className="text-[10px] text-red-400 font-mono mt-1">{errors.username.message}</p>}
             </div>
 
             {/* EMAIL FIELD */}
@@ -180,13 +184,17 @@ const Signup = () => {
               </label>
               <input 
                 type="email" 
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                required
                 placeholder="alan@talentprep.ai" 
-                className="w-full bg-white/[0.02] border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 transition-colors duration-200" 
+                {...register("email", { 
+                  required: "Email is required",
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: "Invalid email address format"
+                  }
+                })}
+                className={`w-full bg-white/[0.02] border ${errors.email ? 'border-red-500 focus:border-red-500' : 'border-zinc-800 focus:border-cyan-500/80'} rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-600 focus:outline-none transition-colors duration-200`} 
               />
+              {errors.email && <p className="text-[10px] text-red-400 font-mono mt-1">{errors.email.message}</p>}
             </div>
 
             {/* PASSWORD FIELD */}
@@ -196,24 +204,28 @@ const Signup = () => {
               </label>
               <input 
                 type="password" 
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                required
                 placeholder="••••••••••••" 
-                className="w-full bg-white/[0.02] border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-cyan-500/80 transition-colors duration-200" 
+                {...register("password", { 
+                  required: "Password is required",
+                  minLength: { value: 6, message: "Password must be at least 6 characters" }
+                })}
+                className={`w-full bg-white/[0.02] border ${errors.password ? 'border-red-500 focus:border-red-500' : 'border-zinc-800 focus:border-cyan-500/80'} rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-700 focus:outline-none transition-colors duration-200`} 
               />
+              {errors.password && <p className="text-[10px] text-red-400 font-mono mt-1">{errors.password.message}</p>}
             </div>
 
             {/* REGISTER ACTION */}
             <div className="pt-2">
               <motion.button 
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
+                whileHover={{ scale: isSubmitting ? 1 : 1.01 }}
+                whileTap={{ scale: isSubmitting ? 1 : 0.99 }}
                 type="submit" 
-                className="w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 hover:opacity-95 text-white font-bold text-xs rounded-xl font-mono py-3.5 tracking-wider uppercase shadow-lg shadow-cyan-500/10 transition-opacity cursor-pointer"
+                disabled={isSubmitting}
+                className={`w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 text-white font-bold text-xs rounded-xl font-mono py-3.5 tracking-wider uppercase shadow-lg shadow-cyan-500/10 transition-opacity ${
+                  isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-95 cursor-pointer'
+                }`}
               >
-                Compile Instance Archetype ⚡
+                {isSubmitting ? 'Compiling Profile...' : 'Compile Instance Archetype ⚡'}
               </motion.button>
             </div>
           </form>
