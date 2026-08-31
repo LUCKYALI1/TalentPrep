@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/auth/authContext';
 
@@ -9,17 +9,16 @@ const navItems = [
     label: 'Services', 
     path: '/services',
     dropdown: [
-      { label: 'ATS Auditor', path: '/services/ats', desc: 'Cross-reference CV optimization arrays' },
-      { label: 'AI Interview Sim', path: '/services/interview', desc: 'Real-time telemetry mock sessions' }
+      { label: 'ATS Resume Checker', path: '/services/ats', desc: 'Optimize your CV for automated screening' },
+      { label: 'AI Interview Practice', path: '/services/interview', desc: 'Mock interviews with instant AI feedback' }
     ]
   },
   { label: 'About', path: '/about' },
 ];
 
-// 🚀 Variants moved OUTSIDE component to prevent re-creation on every render
 const linkVariants = {
-  initial: { y: 0, scale: 1, color: 'rgba(241, 245, 249, 0.75)' },
-  hover: { y: -1, scale: 1.01, color: '#06B6D4' }
+  initial: { y: 0, color: 'rgba(241, 245, 249, 0.75)' },
+  hover: { y: -1, color: '#06B6D4' }
 };
 
 const lineVariants = {
@@ -28,34 +27,55 @@ const lineVariants = {
 };
 
 const dropdownVariants = {
-  hidden: { opacity: 0, y: 10, scale: 0.95 },
+  hidden: { opacity: 0, y: 8, scale: 0.96 },
   visible: { 
     opacity: 1, 
     y: 0, 
     scale: 1,
-    transition: { type: "spring", stiffness: 300, damping: 20 }
+    transition: { type: "spring", stiffness: 350, damping: 25 }
   },
-  exit: { opacity: 0, y: 8, scale: 0.95, transition: { duration: 0.15 } }
+  exit: { opacity: 0, y: 6, scale: 0.96, transition: { duration: 0.15 } }
 };
 
 function Navbar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth(); 
 
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const desktopDropdownRef = useRef(null);
 
+  // Close dropdown on Outside Click or Escape key
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    function handleOutsideInteraction(event) {
+      if (desktopDropdownRef.current && !desktopDropdownRef.current.contains(event.target)) {
         setShowDropdown(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        setShowDropdown(false);
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideInteraction);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideInteraction);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
+
+  // Close mobile navigation on route changes
+  useEffect(() => {
+    setIsOpen(false);
+    setShowDropdown(false);
+    setMobileDropdownOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -63,41 +83,60 @@ function Navbar() {
     navigate('/');
   };
 
-  const userInitial = user?.email?.[0]?.toUpperCase() || 'U';
+  const userInitial = user?.email?.[0]?.toUpperCase() || user?.name?.[0]?.toUpperCase() || 'U';
 
   return (
     <>
-      <nav className="fixed top-4 left-1/2 -translate-x-1/2 w-[92%] max-w-7xl bg-black backdrop-blur-xl rounded-2xl p-4 md:px-8 z-50 border border-zinc-800 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)]">
-        <div className="container mx-auto flex items-center justify-between">
+      {/* Floating Glassmorphic Navbar */}
+      <nav 
+        className="fixed top-4 left-1/2 -translate-x-1/2 w-[92%] max-w-7xl bg-black/80 backdrop-blur-xl rounded-2xl px-5 py-3.5 md:px-8 z-50 border border-zinc-800/90 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]"
+        aria-label="Main Navigation"
+      >
+        <div className="flex items-center justify-between">
           
-          {/* Logo */}
-          <Link to="/" className="text-xl font-black tracking-tight text-white select-none">
-            Talent<span className="text-cyan-400">Prep</span>
+          {/* Brand Logo */}
+          <Link 
+            to="/" 
+            className="flex items-center gap-2 text-xl font-black tracking-tight text-white select-none group focus:outline-none"
+          >
+            
+            <span>Talent<span className="text-cyan-400">Prep</span></span>
           </Link>
           
           {/* Desktop Links */}
           <div className="hidden md:flex items-center"> 
             <ul className="flex items-center gap-8"> 
               {navItems.map((item, idx) => {
+                const isActive = location.pathname === item.path;
+
                 if (item.dropdown) {
                   return (
                     <li 
                       key={idx} 
-                      ref={dropdownRef}
-                      className="relative py-2 cursor-pointer"
+                      ref={desktopDropdownRef}
+                      className="relative py-1 cursor-pointer"
                       onMouseEnter={() => setShowDropdown(true)}
                       onMouseLeave={() => setShowDropdown(false)}
                     >
-                      <motion.div 
-                        variants={linkVariants} 
-                        initial="initial" 
-                        whileHover="hover" 
-                        animate={showDropdown ? "hover" : "initial"}
-                        className="flex items-center gap-1 font-medium text-sm tracking-wide select-none"
+                      <button
+                        onClick={() => setShowDropdown((prev) => !prev)}
+                        aria-expanded={showDropdown}
+                        aria-haspopup="true"
+                        className="flex items-center gap-1.5 focus:outline-none"
                       >
-                        {item.label}
-                        <span className={`text-[9px] font-mono transition-transform duration-200 ${showDropdown ? 'rotate-180 text-cyan-400' : 'text-zinc-500'}`}>▼</span>
-                      </motion.div>
+                        <motion.div 
+                          variants={linkVariants} 
+                          initial="initial" 
+                          whileHover="hover" 
+                          animate={showDropdown || isActive ? "hover" : "initial"}
+                          className="flex items-center gap-1 font-medium text-sm tracking-wide select-none"
+                        >
+                          {item.label}
+                          <span className={`text-[9px] font-mono transition-transform duration-200 ${showDropdown ? 'rotate-180 text-cyan-400' : 'text-zinc-500'}`}>
+                            ▼
+                          </span>
+                        </motion.div>
+                      </button>
                       
                       {/* Dropdown Menu */}
                       <AnimatePresence>
@@ -107,18 +146,21 @@ function Navbar() {
                             initial="hidden"
                             animate="visible"
                             exit="exit"
-                            className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-64 z-50"
+                            className="absolute left-1/2 -translate-x-1/2 top-full pt-3 w-64 z-50"
                           >
-                            <div className="bg-[#09090b]/95 border border-zinc-800 rounded-xl p-2.5 shadow-2xl backdrop-blur-md space-y-1">
+                            <div className="bg-[#09090b] border border-zinc-800 rounded-xl p-2 shadow-2xl backdrop-blur-2xl space-y-1">
                               {item.dropdown.map((subItem, sIdx) => (
                                 <Link
                                   key={sIdx}
                                   to={subItem.path}
-                                  onClick={() => setShowDropdown(false)}
-                                  className="block p-2 rounded-lg hover:bg-zinc-900 transition-colors text-left group"
+                                  className="block p-2.5 rounded-lg hover:bg-zinc-900/80 transition-colors text-left group"
                                 >
-                                  <p className="text-xs font-bold text-zinc-200 group-hover:text-cyan-400 transition-colors">{subItem.label}</p>
-                                  <p className="text-[10px] font-mono text-zinc-500 mt-0.5 leading-tight">{subItem.desc}</p>
+                                  <p className="text-xs font-semibold text-zinc-200 group-hover:text-cyan-400 transition-colors">
+                                    {subItem.label}
+                                  </p>
+                                  <p className="text-[10px] text-zinc-400 mt-0.5 leading-normal">
+                                    {subItem.desc}
+                                  </p>
                                 </Link>
                               ))}
                             </div>
@@ -132,20 +174,20 @@ function Navbar() {
                 return (
                   <motion.li 
                     key={idx}
-                    className="relative py-2 cursor-pointer"
+                    className="relative py-1 cursor-pointer"
                     initial="initial"
                     whileHover="hover"
                     whileTap={{ scale: 0.98 }}
                   >
-                    <Link to={item.path}>
-                      <motion.div variants={linkVariants} transition={{ duration: 0.2, ease: "easeInOut" }}>
-                        <span className="font-medium text-sm tracking-wide block">
+                    <Link to={item.path} className="focus:outline-none">
+                      <motion.div variants={linkVariants} transition={{ duration: 0.2 }}>
+                        <span className={`font-medium text-sm tracking-wide block ${isActive ? 'text-cyan-400 font-semibold' : ''}`}>
                           {item.label}
                         </span>
                       </motion.div>
                     </Link>
                     <motion.div 
-                      className="absolute bottom-0 left-0 h-[1.5px] bg-cyan-400 rounded-full"
+                      className={`absolute bottom-0 left-0 h-[2px] bg-cyan-400 rounded-full ${isActive ? 'w-full' : ''}`}
                       variants={lineVariants}
                       transition={{ duration: 0.2 }}
                     />
@@ -155,58 +197,74 @@ function Navbar() {
             </ul>
           </div>
 
-          {/* Desktop Auth Section */}
+          {/* Desktop Auth Actions */}
           <div className="hidden md:flex items-center gap-4">
             {user ? (
-              <div className="flex items-center gap-6">
-                <Link to="/dashboard" className="text-zinc-300 hover:text-cyan-400 flex items-center gap-2 transition-colors duration-200 text-sm font-medium group">
-                  <span className="h-5 w-5 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-mono flex items-center justify-center text-zinc-400 group-hover:border-cyan-500/50 group-hover:text-cyan-400 transition-colors">
+              <div className="flex items-center gap-5">
+                <Link 
+                  to="/dashboard" 
+                  className="text-zinc-300 hover:text-cyan-400 flex items-center gap-2 transition-colors text-sm font-medium group"
+                >
+                  <span className="h-6 w-6 rounded-full bg-zinc-900 border border-zinc-700 text-[11px] font-mono flex items-center justify-center text-cyan-400 group-hover:border-cyan-500 transition-colors">
                     {userInitial}
                   </span>
                   Dashboard
                 </Link>
                 <button 
                   onClick={handleLogout}
-                  className="text-zinc-500 hover:text-red-400 transition-colors duration-200 text-xs font-mono tracking-wider cursor-pointer font-bold uppercase"
+                  className="text-zinc-400 hover:text-red-400 transition-colors text-xs font-medium cursor-pointer"
                 >
-                  Logout // Exit
+                  Logout
                 </button>
               </div>
             ) : (
-              <>
-                <Link to="/login" className="text-zinc-400 hover:text-white transition-colors duration-200 text-sm font-medium px-3 py-2">
-                  Login
+              <div className="flex items-center gap-3">
+                <Link 
+                  to="/login" 
+                  className="text-zinc-300 hover:text-white transition-colors text-sm font-medium px-3 py-1.5"
+                >
+                  Sign In
                 </Link>
-                <Link to="/signup" className="bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 text-white px-4 py-2 rounded-xl hover:opacity-90 transition-opacity text-sm font-bold font-mono uppercase tracking-wider scale-95">
-                  Register
+                <Link 
+                  to="/signup" 
+                  className="bg-white hover:bg-zinc-200 text-black font-semibold text-xs px-4 py-2 rounded-lg transition-all active:scale-95"
+                >
+                  Get Started
                 </Link>
-              </>
+              </div>
             )}
           </div>
 
-          {/* Mobile Toggle Button */}
+          {/* Mobile Menu Toggle Button */}
           <div className="md:hidden flex items-center">
             <button 
               onClick={() => setIsOpen(!isOpen)} 
-              className="text-zinc-400 hover:text-cyan-400 focus:outline-none transition-colors text-xs font-mono tracking-widest px-2 py-1 border border-zinc-800 bg-zinc-900/40 rounded-lg"
-              aria-label="Toggle Menu"
+              className="p-2 text-zinc-400 hover:text-white focus:outline-none"
+              aria-label="Toggle Navigation Menu"
+              aria-expanded={isOpen}
             >
-              {isOpen ? 'CLOSE' : 'MENU'}
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {isOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
             </button>
           </div>
 
         </div>
       </nav>
 
-      {/* Mobile Menu Drawer */}
+      {/* Mobile Drawer Menu */}
       <AnimatePresence>
         {isOpen && (
           <motion.div 
-            initial={{ opacity: 0, y: -15, scale: 0.98 }}
+            initial={{ opacity: 0, y: -10, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -15, scale: 0.98 }}
+            exit={{ opacity: 0, y: -10, scale: 0.98 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed top-24 left-1/2 -translate-x-1/2 w-[92%] bg-black/95 backdrop-blur-2xl rounded-2xl p-5 shadow-2xl z-40 border border-zinc-900 flex flex-col gap-5 md:hidden"
+            className="fixed top-20 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-[#09090b]/95 backdrop-blur-2xl rounded-2xl p-5 shadow-2xl z-40 border border-zinc-800 flex flex-col gap-4 md:hidden"
           >
             <ul className="flex flex-col gap-1">
               {navItems.map((item, idx) => {
@@ -215,10 +273,12 @@ function Navbar() {
                     <li key={idx} className="flex flex-col">
                       <button 
                         onClick={() => setMobileDropdownOpen(!mobileDropdownOpen)}
-                        className="text-zinc-300 hover:text-cyan-400 flex justify-between items-center py-2 px-3 text-base font-medium transition-all text-left w-full rounded-xl hover:bg-white/5"
+                        className="text-zinc-300 hover:text-cyan-400 flex justify-between items-center py-2.5 px-3 text-sm font-medium transition-colors w-full rounded-xl hover:bg-zinc-900/60"
                       >
                         <span>{item.label}</span>
-                        <span className={`text-[10px] font-mono transition-transform duration-200 ${mobileDropdownOpen ? 'rotate-180 text-cyan-400' : 'text-zinc-500'}`}>▼</span>
+                        <span className={`text-[10px] font-mono transition-transform duration-200 ${mobileDropdownOpen ? 'rotate-180 text-cyan-400' : 'text-zinc-500'}`}>
+                          ▼
+                        </span>
                       </button>
                       
                       <AnimatePresence>
@@ -227,14 +287,13 @@ function Navbar() {
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: "auto", opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden pl-4 flex flex-col border-l border-zinc-800/80 ml-3.5 my-1 gap-1"
+                            className="overflow-hidden pl-4 flex flex-col border-l border-zinc-800 ml-4 my-1 gap-1"
                           >
                             {item.dropdown.map((subItem, sIdx) => (
                               <Link
                                 key={sIdx}
                                 to={subItem.path}
-                                onClick={() => { setIsOpen(false); setMobileDropdownOpen(false); }}
-                                className="text-zinc-400 hover:text-cyan-400 block py-2 px-2 rounded-lg text-sm transition-colors"
+                                className="text-zinc-400 hover:text-cyan-400 block py-2 px-2 rounded-lg text-xs transition-colors"
                               >
                                 {subItem.label}
                               </Link>
@@ -247,10 +306,10 @@ function Navbar() {
                 }
 
                 return (
-                  <li key={idx} onClick={() => setIsOpen(false)}>
+                  <li key={idx}>
                     <Link 
                       to={item.path} 
-                      className="text-zinc-300 hover:text-cyan-400 block py-2 px-3 rounded-xl hover:bg-white/5 text-base font-medium transition-all"
+                      className="text-zinc-300 hover:text-cyan-400 block py-2.5 px-3 rounded-xl hover:bg-zinc-900/60 text-sm font-medium transition-colors"
                     >
                       {item.label}
                     </Link>
@@ -261,34 +320,39 @@ function Navbar() {
 
             <div className="h-[1px] bg-zinc-900 w-full" />
 
-            {/* Mobile Auth Section */}
+            {/* Mobile Auth Actions */}
             <div>
               {user ? (
                 <div className="flex flex-col gap-2">
                   <Link 
                     to="/dashboard" 
-                    onClick={() => setIsOpen(false)}
-                    className="text-zinc-300 hover:text-cyan-400 flex items-center gap-3 py-2.5 px-3 text-base font-medium transition-colors rounded-xl hover:bg-white/5"
+                    className="text-zinc-300 hover:text-cyan-400 flex items-center gap-3 py-2.5 px-3 text-sm font-medium transition-colors rounded-xl hover:bg-zinc-900/60"
                   >
-                    <span className="h-5 w-5 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-mono flex items-center justify-center text-zinc-400">
+                    <span className="h-6 w-6 rounded-full bg-zinc-900 border border-zinc-700 text-[10px] font-mono flex items-center justify-center text-cyan-400">
                       {userInitial}
                     </span>
                     Dashboard
                   </Link>
                   <button 
                     onClick={handleLogout}
-                    className="text-left text-red-400 hover:text-red-300 flex items-center gap-3 py-2.5 px-3 text-base font-medium transition-colors rounded-xl hover:bg-white/5 w-full cursor-pointer font-mono text-xs uppercase font-bold"
+                    className="text-left text-red-400 hover:text-red-300 py-2.5 px-3 text-sm font-medium transition-colors rounded-xl hover:bg-zinc-900/60 w-full"
                   >
-                    Logout // Exit session ⚡
+                    Logout
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col gap-2.5" onClick={() => setIsOpen(false)}>
-                  <Link to="/login" className="text-zinc-400 text-center py-2.5 rounded-xl text-sm font-medium hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all">
-                    Login
+                <div className="flex flex-col gap-2 pt-1">
+                  <Link 
+                    to="/login" 
+                    className="text-zinc-300 text-center py-2.5 rounded-xl text-sm font-medium hover:bg-zinc-900/60 border border-zinc-800 transition-colors"
+                  >
+                    Sign In
                   </Link>
-                  <Link to="/signup" className="bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 text-white text-center py-2.5 rounded-xl text-sm font-bold font-mono uppercase tracking-wider shadow-lg shadow-cyan-500/10">
-                    Register
+                  <Link 
+                    to="/signup" 
+                    className="bg-white hover:bg-zinc-200 text-black font-semibold text-center py-2.5 rounded-xl text-sm transition-all shadow-md"
+                  >
+                    Get Started
                   </Link>
                 </div>
               )}

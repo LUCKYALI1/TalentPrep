@@ -1,90 +1,108 @@
-import React from 'react'
-import { motion } from 'framer-motion'
+import React from 'react';
+import { motion } from 'framer-motion';
 
-// 🚀 1. Static Background Grid Style (Prevents object recreation on every render)
+// Static background pattern inline style
 const gridBackgroundStyle = {
   backgroundImage: `
-    linear-gradient(to right, #3f3f46 1px, transparent 1px),
-    linear-gradient(to bottom, #3f3f46 1px, transparent 1px)
+    linear-gradient(to right, #27272a 1px, transparent 1px),
+    linear-gradient(to bottom, #27272a 1px, transparent 1px)
   `,
-  backgroundSize: "32px 32px"
+  backgroundSize: "36px 36px"
 };
 
-// 🚀 2. Static Data Arrays (Moved outside component scope)
+// Static Data Definitions
 const METRICS = [
-  { value: "92%", label: "Avg ATS Match Gain", track: "Resume optimization lift" },
-  { value: "140", label: "Target WPM Cadence", track: "Optimal articulation mark" },
-  { value: "45k+", label: "Logic Loops Vetted", track: "Algorithmic paths tracked" },
-  { value: "0ms", label: "Analysis Latency", track: "Real-time grading loop" }
+  { value: "94%", label: "ATS Pass Rate", track: "CV Optimization Lift" },
+  { value: "140 WPM", label: "Speech Cadence", track: "Target Articulation Speed" },
+  { value: "50k+", label: "Sessions Evaluated", track: "Mock Interviews Analyzed" },
+  { value: "<100ms", label: "AI Feedback Latency", track: "Real-Time Scoring Loop" }
 ];
 
 const TESTIMONIALS = [
   {
-    quote: "The O(log N) runtime evaluation forced me to stop brute-forcing problems out loud. Spoke my way cleanly into a Tier-1 panel offer.",
-    author: "Backend Lead Candidate",
-    calibration: "ATS Score: 94%"
+    quote: "The algorithmic runtime analysis forced me to stop rambling out loud. I structured my system design response cleanly and landed an offer at a Tier-1 tech company.",
+    author: "Senior Backend Engineer",
+    calibration: "ATS Score: 96%"
   },
   {
-    quote: "Extremely calibrated pacing tracking. Getting flagged instantly for my filler word density completely restructured how I talk through microservices architecture.",
-    author: "Systems Engineer",
-    calibration: "Optimal WPM Maintained"
+    quote: "Instant feedback on my filler word density completely transformed how I explain microservices. I gained full confidence in my pacing within three practice runs.",
+    author: "Systems Architect Lead",
+    calibration: "Optimal Speech Cadence"
   }
 ];
 
-// 🚀 3. Motion Variants (Standardized for smooth frame execution)
-const statCardVariants = {
-  hidden: { opacity: 0, y: 15 },
-  visible: (i) => ({
+// Motion Animation Variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
     opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, delay: i * 0.1 }
-  })
+    transition: {
+      staggerChildren: 0.12,
+      delayChildren: 0.1
+    }
+  }
 };
 
-const TrustMetricsProof = () => {
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" }
+  }
+};
+
+function TrustMetricsProof() {
   return (
-    <section className="relative w-full min-h-screen bg-black text-white flex flex-col items-center justify-center py-20 px-4 sm:px-6 lg:px-8 font-sans overflow-hidden select-none">
+    <section className="relative w-full bg-black text-white flex flex-col items-center justify-center py-20 px-4 sm:px-6 lg:px-8 font-sans overflow-hidden select-none">
       
-      {/* Background Grid Matrix */}
+      {/* Background Matrix & Radial Glow */}
       <div 
-        className="absolute inset-0 z-0 opacity-15 pointer-events-none"
+        className="absolute inset-0 z-0 opacity-20 pointer-events-none"
         style={gridBackgroundStyle}
       />
+      <div className="absolute top-[25%] left-1/2 -translate-x-1/2 w-[700px] h-[300px] bg-indigo-600/10 blur-[130px] rounded-full pointer-events-none z-0" />
 
-      {/* Ambient Purple Backdrop Glow */}
-      <div className="absolute top-[20%] left-[50%] -translate-x-1/2 w-[800px] h-[350px] bg-indigo-600/10 blur-[140px] rounded-full pointer-events-none z-0" />
-
-      {/* Core Content Layer */}
+      {/* Main Content Layer */}
       <div className="relative z-10 max-w-5xl w-full mx-auto space-y-16">
         
         {/* Header Block */}
-        <div className="text-center max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-800 bg-zinc-900/40 text-[11px] font-mono text-cyan-400 uppercase tracking-widest mb-4">
-            <span className="flex h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+        <motion.div 
+          initial={{ opacity: 0, y: -15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="text-center max-w-2xl mx-auto"
+        >
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-800 bg-zinc-900/60 text-[11px] font-mono text-cyan-400 uppercase tracking-widest mb-4">
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
             Calibration Metrics
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-            Engineered for Vetted <br />
+            Engineered for <br />
             <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
-              Enterprise Alignment
+              Enterprise Benchmarks
             </span>
           </h2>
-          <p className="text-zinc-400 text-sm mt-4 max-w-md mx-auto leading-relaxed">
-            We don't deal in generic career suggestions. Our evaluation layers map your code accuracy and speech telemetry straight to elite technical frameworks.
+          <p className="text-zinc-400 text-sm sm:text-base mt-4 max-w-md mx-auto leading-relaxed">
+            Our analysis engine maps response structure, domain keywords, and speech telemetry directly against real technical interview standards.
           </p>
-        </div>
+        </motion.div>
 
-        {/* Telemetry Aggregate Numbers Row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-          {METRICS.map((stat, idx) => (
+        {/* Aggregate Metrics Grid */}
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full"
+        >
+          {METRICS.map((stat) => (
             <motion.div
               key={stat.label}
-              custom={idx}
-              variants={statCardVariants}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              className="bg-[#09090b]/90 border border-zinc-900/90 rounded-xl p-5 backdrop-blur-sm shadow-xl space-y-1"
+              variants={cardVariants}
+              whileHover={{ y: -4, transition: { duration: 0.2 } }}
+              className="bg-[#09090b] border border-zinc-800/80 rounded-xl p-5 backdrop-blur-md shadow-xl space-y-1 hover:border-zinc-700 transition-colors"
             >
               <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                 {stat.value}
@@ -97,47 +115,54 @@ const TrustMetricsProof = () => {
               </div>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
 
-        {/* Asymmetric Peer Proof Workspace Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch w-full">
+        {/* Peer Verification Asymmetric Cards */}
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch w-full"
+        >
           {TESTIMONIALS.map((card, idx) => (
-            <div 
+            <motion.div 
               key={card.author}
+              variants={cardVariants}
+              whileHover={{ y: -4, transition: { duration: 0.2 } }}
               className={`${
                 idx === 0 ? 'md:col-span-7' : 'md:col-span-5'
-              } bg-[#09090b]/90 border border-zinc-900/90 rounded-2xl p-6 flex flex-col justify-between backdrop-blur-sm shadow-2xl relative group overflow-hidden`}
+              } bg-[#09090b] border border-zinc-800/80 rounded-2xl p-6 flex flex-col justify-between backdrop-blur-md shadow-2xl relative group hover:border-zinc-700 transition-colors`}
             >
-              {/* Card Top Decorative Pipeline Tag */}
-              <div className="flex items-center justify-between border-b border-zinc-900/60 pb-3 mb-4">
+              {/* Card Header Tag */}
+              <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3 mb-4">
                 <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
-                  Verification Sequence 0{idx + 1}
+                  Verified Candidate 0{idx + 1}
                 </span>
-                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/20 border border-emerald-900/60 px-2 py-0.5 rounded">
+                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-900/60 px-2 py-0.5 rounded-full font-medium">
                   {card.calibration}
                 </span>
               </div>
 
-              {/* Verified Text Block */}
-              <p className="text-sm text-zinc-300 leading-relaxed italic flex-1 py-2">
+              {/* Quote Body */}
+              <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed italic flex-1 py-2">
                 "{card.quote}"
               </p>
 
-              {/* Author Signature Deck */}
-              <div className="mt-6 pt-4 border-t border-zinc-900/60 flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-400 group-hover:text-white transition-colors">
+              {/* Author Footer */}
+              <div className="mt-6 pt-4 border-t border-zinc-800/80 flex items-center justify-between">
+                <span className="text-xs font-semibold text-zinc-400 group-hover:text-white transition-colors">
                   {card.author}
                 </span>
-                <span className="text-cyan-400 text-xs font-mono">◆ Vetted</span>
+                <span className="text-cyan-400 text-xs font-mono font-medium">◆ Verified Pass</span>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
       </div>
     </section>
-  )
+  );
 }
 
-// 🚀 4. Wrapped export with React.memo
 export default React.memo(TrustMetricsProof);

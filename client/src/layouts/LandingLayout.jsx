@@ -20,7 +20,7 @@ const LandingLayout = () => {
 
       {/* Below The Fold: Async / Suspense Chunks */}
       <Suspense fallback={<SectionSkeleton />}>
-        <WhyChoose />
+        {/* <WhyChoose /> */}
         <TrustMetricsProof />
         <ProofAndFAQs />
         <Footer />

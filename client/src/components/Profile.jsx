@@ -3,8 +3,22 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import api from '../utils/api';
 
-const Profile = () => {
-  // ⚡ DESTUCTURED login / updateUser state handler from your core auth system hook
+const INITIAL_PROFILE = {
+  firstName: '',
+  lastName: '',
+  avatar: { url: '', public_id: '' },
+  address: '',
+  alternativeEmail: '',
+  skills: '',
+  jobRole: '',
+  currentCompany: '',
+  bio: '',
+  experienceYears: 0,
+  githubUrl: '',
+  linkedinUrl: ''
+};
+
+function Profile() {
   const { user, updateUser } = useAuth();
   const fileInputRef = useRef(null);
   
@@ -12,27 +26,11 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState({ error: '', success: '' });
 
-  const [profileData, setProfileData] = useState({
-    firstName: '',
-    lastName: '',
-    avatar: { url: '', public_id: '' }, 
-    address: '',
-    alternativeEmail: '',
-    skills: '',
-    jobRole: '',
-    currentCompany: '',
-    bio: '',
-    experienceYears: 0,
-    githubUrl: '',
-    linkedinUrl: ''
-  });
-
+  const [profileData, setProfileData] = useState(INITIAL_PROFILE);
   const [avatarPreview, setAvatarPreview] = useState('');
 
-  // ⚡ PIPELINE DEEP INTEGRATION: Core profile database retrieval parser function
-  const fetchLatestDatabaseProfile = async () => {
+  const fetchProfile = async () => {
     try {
-      // Direct pipeline query matching backend controller specifications
       const res = await api.get('/user/profile/get-profile'); 
       if (res.data) {
         const backendAvatar = typeof res.data.avatar === 'string' 
@@ -42,17 +40,16 @@ const Profile = () => {
         setProfileData({
           ...res.data,
           avatar: backendAvatar,
-          skills: Array.isArray(res.data.skills) ? res.data.skills.join(', ') : res.data.skills
+          skills: Array.isArray(res.data.skills) ? res.data.skills.join(', ') : (res.data.skills || '')
         });
       }
     } catch (err) {
-      console.error("Failed to fetch fresh backend profile data node:", err);
+      console.error("Failed to fetch profile data:", err);
     }
   };
 
-  // Run on initial structural mounting instance
   useEffect(() => {
-    fetchLatestDatabaseProfile();
+    fetchProfile();
   }, []);
 
   const handleInputChange = (e) => {
@@ -65,7 +62,7 @@ const Profile = () => {
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      setFeedback({ error: 'Payload validation error: File sizes must stay under 2MB limit.', success: '' });
+      setFeedback({ error: 'Image size must be under 2MB.', success: '' });
       return;
     }
 
@@ -76,29 +73,17 @@ const Profile = () => {
     reader.readAsDataURL(file);
   };
 
-  const triggerImageUploadClick = () => {
-    if (isEditing && fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
   const handleUpdateSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setFeedback({ error: '', success: '' });
 
     const formPayload = new FormData();
-    formPayload.append('firstName', profileData.firstName);
-    formPayload.append('lastName', profileData.lastName);
-    formPayload.append('address', profileData.address);
-    formPayload.append('alternativeEmail', profileData.alternativeEmail);
-    formPayload.append('skills', profileData.skills);
-    formPayload.append('jobRole', profileData.jobRole);
-    formPayload.append('currentCompany', profileData.currentCompany);
-    formPayload.append('bio', profileData.bio);
-    formPayload.append('experienceYears', profileData.experienceYears);
-    formPayload.append('githubUrl', profileData.githubUrl);
-    formPayload.append('linkedinUrl', profileData.linkedinUrl);
+    Object.keys(profileData).forEach(key => {
+      if (key !== 'avatar') {
+        formPayload.append(key, profileData[key] ?? '');
+      }
+    });
 
     if (fileInputRef.current?.files[0]) {
       formPayload.append('avatar', fileInputRef.current.files[0]);
@@ -108,87 +93,87 @@ const Profile = () => {
       const config = { headers: { 'Content-Type': 'multipart/form-data' } };
       const res = await api.put('/user/profile/update-profile', formPayload, config);
       
-      setFeedback({ success: res.data.message || 'Telemetry profile synchronized successfully!', error: '' });
+      setFeedback({ success: res.data.message || 'Profile updated successfully!', error: '' });
       setIsEditing(false);
       setAvatarPreview('');
       
-      // ⚡ SYNC PIPELINE STEP 2: Trigger direct global state re-fetching protocols
-      // If your useAuth handles a dynamic data upgrade method like updateUser()
       if (updateUser && res.data.profile) {
         updateUser(res.data.profile);
       }
 
-      // Re-run database parser to pull full fresh metrics direct from database logs
-      await fetchLatestDatabaseProfile();
-
+      await fetchProfile();
     } catch (err) {
-      setFeedback({ error: err.response?.data?.message || 'Data sync failed.', success: '' });
+      setFeedback({ error: err.response?.data?.message || 'Failed to update profile.', success: '' });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getInputStyles = (isFieldDisabled) => `
-    w-full px-4 py-2.5 rounded-xl border font-mono text-xs text-white transition-all duration-200 outline-none
-    ${isFieldDisabled 
-      ? 'bg-zinc-950/40 border-zinc-900 text-zinc-500 cursor-not-allowed border-dashed' 
-      : 'bg-zinc-900 border-zinc-800 focus:border-cyan-500/80 focus:ring-1 focus:ring-cyan-500/30 text-white'
+  const getInputStyles = (disabled) => `
+    w-full px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-medium transition-all duration-150 outline-none
+    ${disabled 
+      ? 'bg-zinc-950/40 border-zinc-900 text-zinc-500 cursor-not-allowed' 
+      : 'bg-zinc-900 border-zinc-800 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500'
     }
-    autofill:bg-zinc-900 autofill:text-white [-webkit-text-fill-color:white] 
-    [box-shadow:0_0_0px_1000px_#18181b_inset]
   `.trim();
 
   return (
-    <div className="w-full space-y-8 pb-12 text-zinc-300 custom-cyan-scrollbar selection:bg-cyan-500/30">
+    <div className="w-full space-y-6 pb-12 text-zinc-300">
       
-      {/* Dynamic Header Greeting Module */}
-      <div className="border-b border-zinc-900 pb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* Header Section */}
+      <div className="border-b border-zinc-900 pb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight uppercase">
-            Welcome back, {profileData.firstName || user?.username || 'Candidate'}
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            Personal Profile
           </h1>
-          <p className="text-xs font-mono text-zinc-500 mt-1">
-            [PIPELINE_STATUS: SECURE_SYNC // ENV: PRODUCTION]
+          <p className="text-xs text-zinc-400 mt-1">
+            Manage your personal credentials, experience, and system metrics.
           </p>
         </div>
         
         <button
           type="button"
           onClick={() => { 
-            if(isEditing) { 
-              setFeedback({error:'', success:''});
+            if (isEditing) { 
+              setFeedback({ error: '', success: '' });
               setAvatarPreview('');
             } 
             setIsEditing(!isEditing); 
           }}
-          className={`px-4 py-2 font-mono text-xs font-bold rounded-xl tracking-wider transition-all border uppercase cursor-pointer ${
+          className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all border ${
             isEditing 
-              ? 'border-red-900 bg-red-950/20 text-red-400 hover:bg-red-900/20' 
+              ? 'border-red-900/60 bg-red-950/20 text-red-400 hover:bg-red-900/30' 
               : 'border-zinc-800 bg-zinc-900 text-white hover:border-zinc-700'
           }`}
         >
-          {isEditing ? '[ABORT // LOCK]' : '[EDIT_MODE // UNLOCK]'}
+          {isEditing ? 'Cancel Editing' : 'Edit Profile'}
         </button>
       </div>
 
-      {/* System Feedback Messages */}
+      {/* Notifications */}
       {(feedback.error || feedback.success) && (
-        <div className="font-mono text-[11px]">
-          {feedback.error && <div className="p-3 bg-red-950/20 border border-red-900 text-red-400 rounded-xl">⚠️ [EXC_ERR]: {feedback.error}</div>}
-          {feedback.success && <div className="p-3 bg-emerald-950/20 border border-emerald-900 text-emerald-400 rounded-xl animate-pulse">🚀 [SUCCESS]: {feedback.success}</div>}
+        <div className="text-xs font-medium">
+          {feedback.error && (
+            <div className="p-3 bg-red-950/20 border border-red-900/50 text-red-400 rounded-xl">
+              {feedback.error}
+            </div>
+          )}
+          {feedback.success && (
+            <div className="p-3 bg-emerald-950/20 border border-emerald-900/50 text-emerald-400 rounded-xl">
+              {feedback.success}
+            </div>
+          )}
         </div>
       )}
 
-      <form onSubmit={handleUpdateSubmit} className="space-y-8">
+      <form onSubmit={handleUpdateSubmit} className="space-y-6">
         
-        {/* ==================== ROW 1: CORE DEMOGRAPHICS METRICS ==================== */}
-        <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 relative overflow-hidden shadow-xl">
-          <div className="absolute top-2 right-3 text-[9px] font-mono text-zinc-700 uppercase">[ROW_01 // IDENTITY_NODES]</div>
-          
-          <div className="flex flex-col lg:flex-row gap-6 items-center lg:items-start">
+        {/* Core Demographics Card */}
+        <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-5 sm:p-6 shadow-xl">
+          <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
             
-            {/* Hidden Input Stream & Interactive Avatar Grid */}
-            <div className="relative flex flex-col items-center flex-shrink-0">
+            {/* Avatar Uploader */}
+            <div className="relative flex flex-col items-center shrink-0">
               <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -197,160 +182,144 @@ const Profile = () => {
                 className="hidden" 
               />
               <div 
-                onClick={triggerImageUploadClick}
-                className={`w-24 h-24 rounded-2xl bg-zinc-900 border flex items-center justify-center text-zinc-600 font-mono text-[10px] uppercase overflow-hidden relative transition-all ${
+                onClick={() => isEditing && fileInputRef.current?.click()}
+                className={`w-24 h-24 rounded-2xl bg-zinc-900 border flex items-center justify-center text-zinc-600 text-xs overflow-hidden relative transition-all ${
                   isEditing 
-                    ? 'border-cyan-500/40 cursor-pointer hover:border-cyan-400 group shadow-md shadow-cyan-500/5' 
+                    ? 'border-cyan-500/50 cursor-pointer hover:border-cyan-400 group' 
                     : 'border-zinc-800'
                 }`}
               >
                 {avatarPreview || profileData.avatar?.url ? (
-                  <img src={avatarPreview || profileData.avatar.url} alt="Profile Avatar" className="w-full h-full object-cover" />
+                  <img src={avatarPreview || profileData.avatar.url} alt="User Avatar" className="w-full h-full object-cover" />
                 ) : (
-                  <span>[NO_IMG]</span>
+                  <span className="text-zinc-500">No Image</span>
                 )}
                 
                 {isEditing && (
-                  <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-cyan-400 transition-opacity duration-150 gap-1 text-[9px] p-1 text-center">
-                    <span>⚡ CHANGE</span>
-                    <span>IMAGE</span>
+                  <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex items-center justify-center text-cyan-400 transition-opacity text-xs font-medium">
+                    Change Photo
                   </div>
                 )}
               </div>
-              {isEditing && (
-                <span className="text-[8px] font-mono text-cyan-500/60 mt-1 uppercase tracking-wider">
-                  [Click Box]
-                </span>
-              )}
             </div>
 
-            {/* Profile Variables Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full text-left">
-              <div className="space-y-1">
-                <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-wide">First Name</label>
-                <input type="text" name="firstName" disabled={!isEditing} value={profileData.firstName} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="Lucky" />
+            {/* General Information Inputs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
+              <div className="space-y-1 text-left">
+                <label className="text-xs text-zinc-400 font-medium">First Name</label>
+                <input type="text" name="firstName" disabled={!isEditing} value={profileData.firstName} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="First Name" />
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-wide">Last Name</label>
-                <input type="text" name="lastName" disabled={!isEditing} value={profileData.lastName} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="Ali" />
+              <div className="space-y-1 text-left">
+                <label className="text-xs text-zinc-400 font-medium">Last Name</label>
+                <input type="text" name="lastName" disabled={!isEditing} value={profileData.lastName} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="Last Name" />
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-wide">Username Routing</label>
+              <div className="space-y-1 text-left">
+                <label className="text-xs text-zinc-400 font-medium">Username</label>
                 <input type="text" disabled value={user?.username || 'candidate_node'} className={getInputStyles(true)} />
               </div>
-              <div className="space-y-1 sm:col-span-2">
-                <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-wide">Mail Routing Address</label>
-                <input type="email" name="alternativeEmail" disabled={!isEditing} value={profileData.alternativeEmail} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="ali@talentprep.ai" />
+              <div className="space-y-1 sm:col-span-2 text-left">
+                <label className="text-xs text-zinc-400 font-medium">Secondary Email</label>
+                <input type="email" name="alternativeEmail" disabled={!isEditing} value={profileData.alternativeEmail} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="email@example.com" />
               </div>
-              <div className="space-y-1 sm:col-span-1">
-                <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-wide">Address Node</label>
-                <input type="text" name="address" disabled={!isEditing} value={profileData.address} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="Ghaziabad, IN" />
+              <div className="space-y-1 sm:col-span-1 text-left">
+                <label className="text-xs text-zinc-400 font-medium">Location / Address</label>
+                <input type="text" name="address" disabled={!isEditing} value={profileData.address} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="City, Country" />
               </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Professional Experience Card */}
+        <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-5 sm:p-6 shadow-xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+            <div className="space-y-1">
+              <label className="text-xs text-zinc-400 font-medium">Target Job Role</label>
+              <input type="text" name="jobRole" disabled={!isEditing} value={profileData.jobRole} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="e.g. Full-Stack Engineer" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-zinc-400 font-medium">Current Company</label>
+              <input type="text" name="currentCompany" disabled={!isEditing} value={profileData.currentCompany} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="Company Name" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-zinc-400 font-medium">Primary Skills</label>
+              <input type="text" name="skills" disabled={!isEditing} value={profileData.skills} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="React, Node.js, Python" />
             </div>
           </div>
         </div>
 
-        {/* ==================== ROW 2: PROFESSIONAL TECH INSTANCE ==================== */}
-        <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 relative overflow-hidden shadow-xl">
-          <div className="absolute top-2 right-3 text-[9px] font-mono text-zinc-700 uppercase">[ROW_02 // PROFESSIONAL_STACK]</div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-            <div className="space-y-1">
-              <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-wide">Target Job Role</label>
-              <input type="text" name="jobRole" disabled={!isEditing} value={profileData.jobRole} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="Full-Stack Engineer" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-wide">Current Company Workspace</label>
-              <input type="text" name="currentCompany" disabled={!isEditing} value={profileData.currentCompany} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="TalentPrep Engineering" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-wide">Skills Matrix (Comma Separated)</label>
-              <input type="text" name="skills" disabled={!isEditing} value={profileData.skills} onChange={handleInputChange} className={`${getInputStyles(!isEditing)} !text-cyan-400`} placeholder="React, Node.js, MERN" />
-            </div>
-          </div>
-        </div>
-
-        {/* ==================== ROW 3: PLATFORM ANALYTICS & TELEMETRY ==================== */}
+        {/* Bio & Links Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
           
-          <div className="lg:col-span-2 bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 relative overflow-hidden shadow-xl flex flex-col justify-between">
-            <div className="absolute top-2 right-3 text-[9px] font-mono text-zinc-700 uppercase">[ROW_03_A // INTEL_SUMMARY]</div>
+          <div className="lg:col-span-2 bg-zinc-950/60 border border-zinc-900 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs text-zinc-400 font-medium">Professional Bio</label>
+              <textarea 
+                name="bio" 
+                rows="3" 
+                disabled={!isEditing} 
+                value={profileData.bio} 
+                onChange={handleInputChange} 
+                className={`${getInputStyles(!isEditing)} resize-none h-24`} 
+                placeholder="Brief summary of your professional background..." 
+              />
+            </div>
             
-            <div className="space-y-4">
-              <div className="space-y-1 mt-2">
-                <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-wide">Candidate Bio Protocol</label>
-                <textarea 
-                  name="bio" 
-                  rows="3" 
-                  disabled={!isEditing} 
-                  value={profileData.bio} 
-                  onChange={handleInputChange} 
-                  className={`w-full px-4 py-2.5 rounded-xl border font-mono text-xs text-white transition-all duration-200 outline-none resize-none h-24 ${
-                    !isEditing 
-                      ? 'bg-zinc-950/40 border-zinc-900 text-zinc-500 cursor-not-allowed border-dashed' 
-                      : 'bg-zinc-900 border-zinc-800 focus:border-cyan-500/80 focus:ring-1 focus:ring-cyan-500/30'
-                  }`} 
-                  placeholder="Brief system engineering telemetry bio details..." 
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-zinc-400 font-medium">Years of Experience</label>
+                <input type="number" name="experienceYears" disabled={!isEditing} value={profileData.experienceYears} onChange={handleInputChange} className={getInputStyles(!isEditing)} />
               </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-wide">Experience (Years)</label>
-                  <input type="number" name="experienceYears" disabled={!isEditing} value={profileData.experienceYears} onChange={handleInputChange} className={getInputStyles(!isEditing)} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-wide">GitHub Matrix Node</label>
-                  <input type="text" name="githubUrl" disabled={!isEditing} value={profileData.githubUrl} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="https://github.com/..." />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-wide">LinkedIn Gateway</label>
-                  <input type="text" name="linkedinUrl" disabled={!isEditing} value={profileData.linkedinUrl} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="https://linkedin.com/in/..." />
-                </div>
+              <div className="space-y-1">
+                <label className="text-xs text-zinc-400 font-medium">GitHub Profile</label>
+                <input type="text" name="githubUrl" disabled={!isEditing} value={profileData.githubUrl} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="https://github.com/..." />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-zinc-400 font-medium">LinkedIn Profile</label>
+                <input type="text" name="linkedinUrl" disabled={!isEditing} value={profileData.linkedinUrl} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="https://linkedin.com/in/..." />
               </div>
             </div>
           </div>
 
-          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 relative overflow-hidden shadow-xl flex flex-col justify-between">
-            <div className="absolute top-2 right-3 text-[9px] font-mono text-zinc-700 uppercase">[ROW_03_B // TELEMETRY_RADAR]</div>
-            
-            <div className="mt-4 space-y-4 font-mono text-xs">
-              <div className="flex justify-between items-center border-b border-zinc-900/60 pb-2">
-                <span className="text-zinc-500">ATS Resume Status</span>
-                <span className="text-emerald-400 font-bold bg-emerald-950/20 px-2 py-0.5 rounded border border-emerald-950">92% MATCH</span>
+          {/* Platform Performance Overview Card */}
+          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between">
+            <div className="space-y-4 text-xs font-mono">
+              <h3 className="text-xs font-sans font-semibold text-zinc-300">Platform Analytics</h3>
+              <div className="flex justify-between items-center border-b border-zinc-900 pb-2">
+                <span className="text-zinc-500">ATS Match Score</span>
+                <span className="text-emerald-400 font-semibold">92%</span>
               </div>
-              <div className="flex justify-between items-center border-b border-zinc-900/60 pb-2">
-                <span className="text-zinc-500">AI Interviews Done</span>
-                <span className="text-white font-bold bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">04 CONSOLES</span>
+              <div className="flex justify-between items-center border-b border-zinc-900 pb-2">
+                <span className="text-zinc-500">Interviews Completed</span>
+                <span className="text-white font-semibold">4 Sessions</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-zinc-500">Avg Comm Metric</span>
-                <span className="text-cyan-400 font-bold bg-cyan-950/20 px-2 py-0.5 rounded border border-cyan-950">A- EXCELLENT</span>
+                <span className="text-zinc-500">Communication Grade</span>
+                <span className="text-cyan-400 font-semibold">A (Excellent)</span>
               </div>
             </div>
 
-            <div className="text-[9px] font-mono text-zinc-600 border-t border-zinc-900/80 pt-4 mt-4 leading-normal">
-              * Note: The telemetry data slots are read-only hooks, dynamic real-time evaluations populate these values during active simulators.
-            </div>
+            <p className="text-[11px] text-zinc-500 pt-4 mt-4 border-t border-zinc-900">
+              Analytics update automatically as you complete practical interview sessions.
+            </p>
           </div>
 
         </div>
 
-        {/* Floating Safe Commit Footer Panel */}
+        {/* Submit Action Bar */}
         <AnimatePresence>
           {isEditing && (
             <motion.div 
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 15 }}
-              className="pt-4"
+              exit={{ opacity: 0, y: 10 }}
             >
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-white font-mono font-black text-xs uppercase tracking-widest py-4 rounded-xl shadow-lg shadow-cyan-500/5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs uppercase tracking-wider py-3.5 rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? "Synchronizing core database grids..." : "Commit changes to main telemetry tree ⚡"}
+                {isLoading ? "Saving Changes..." : "Save Profile Changes"}
               </button>
             </motion.div>
           )}
@@ -359,6 +328,6 @@ const Profile = () => {
       </form>
     </div>
   );
-};
+}
 
-export default Profile;
+export default React.memo(Profile);
