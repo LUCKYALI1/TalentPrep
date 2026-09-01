@@ -1,6 +1,6 @@
 import express from 'express';
 import { updateProfile  } from '../controllers/profileController.js';
-import { protect } from '../middleware/auth.js'; // Apne project structure ke hisab se auth path verify kar lena
+import { protect } from '../middlewares/auth.middleware.js'; 
 import { upload } from '../config/cloudinary.js';
 import { getProfile } from '../controllers/profileController.js';
 

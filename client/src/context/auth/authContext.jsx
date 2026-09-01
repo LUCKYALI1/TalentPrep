@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../utils/api'; 
 
 export const AuthContext = createContext(null);
@@ -9,6 +9,7 @@ export const AuthProvider = ({ children }) => {
       const savedUser = localStorage.getItem('user');
       return savedUser ? JSON.parse(savedUser) : null;
     } catch (error) {
+      console.error("Failed to parse cached user:", error);
       return null;
     }
   });
@@ -20,7 +21,7 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       const savedUser = localStorage.getItem('user');
 
-      // Loop Fix: Agar token/user hai hi nahi, toh backend request hit mat karo
+      // Token ya saved user na hone par skip backend call
       if (!token && !savedUser) {
         setUser(null);
         setLoading(false);
@@ -28,12 +29,13 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        const response = await api.get('/auth/verify'); 
-        setUser(response.data.user);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+        const response = await api.get('auth/verify'); 
+        const verifiedUser = response.data?.user || response.data;
+        
+        setUser(verifiedUser);
+        localStorage.setItem('user', JSON.stringify(verifiedUser));
       } catch (error) {
         console.error("Session verification failed:", error);
-        // Clean up invalid session
         setUser(null);
         localStorage.removeItem('user');
         localStorage.removeItem('token');
@@ -45,15 +47,15 @@ export const AuthProvider = ({ children }) => {
     verifyUserSession();
   }, []);
 
-  const login = (userData, token) => {
+  const login = useCallback((userData, token) => {
     if (token) localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userData));
+    if (userData) localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
-  };
+  }, []);
   
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
-      await api.post('/auth/logout');
+      await api.post('auth/logout');
     } catch (err) {
       console.error("Logout handshake failed:", err);
     } finally {
@@ -61,13 +63,26 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('token');
       setUser(null);
     }
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    user,
+    loading,
+    login,
+    logout
+  }), [user, loading, login, logout]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

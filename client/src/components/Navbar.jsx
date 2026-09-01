@@ -40,14 +40,13 @@ const dropdownVariants = {
 function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth(); 
+  const { user, logout, loading } = useAuth(); 
 
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
   const desktopDropdownRef = useRef(null);
 
-  // Close dropdown on Outside Click or Escape key
   useEffect(() => {
     function handleOutsideInteraction(event) {
       if (desktopDropdownRef.current && !desktopDropdownRef.current.contains(event.target)) {
@@ -70,40 +69,38 @@ function Navbar() {
     };
   }, []);
 
-  // Close mobile navigation on route changes
   useEffect(() => {
     setIsOpen(false);
     setShowDropdown(false);
     setMobileDropdownOpen(false);
   }, [location.pathname]);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setIsOpen(false);
-    navigate('/');
+    setShowDropdown(false);
+    navigate('/login');
   };
 
-  const userInitial = user?.email?.[0]?.toUpperCase() || user?.name?.[0]?.toUpperCase() || 'U';
+  const userInitial = user?.firstName?.[0]?.toUpperCase() || 
+                      user?.username?.[0]?.toUpperCase() || 
+                      user?.email?.[0]?.toUpperCase() || 
+                      'U';
 
   return (
     <>
-      {/* Floating Glassmorphic Navbar */}
       <nav 
         className="fixed top-4 left-1/2 -translate-x-1/2 w-[92%] max-w-7xl bg-black/80 backdrop-blur-xl rounded-2xl px-5 py-3.5 md:px-8 z-50 border border-zinc-800/90 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]"
         aria-label="Main Navigation"
       >
         <div className="flex items-center justify-between">
-          
-          {/* Brand Logo */}
           <Link 
             to="/" 
             className="flex items-center gap-2 text-xl font-black tracking-tight text-white select-none group focus:outline-none"
           >
-            
             <span>Talent<span className="text-cyan-400">Prep</span></span>
           </Link>
           
-          {/* Desktop Links */}
           <div className="hidden md:flex items-center"> 
             <ul className="flex items-center gap-8"> 
               {navItems.map((item, idx) => {
@@ -138,7 +135,6 @@ function Navbar() {
                         </motion.div>
                       </button>
                       
-                      {/* Dropdown Menu */}
                       <AnimatePresence>
                         {showDropdown && (
                           <motion.div 
@@ -153,6 +149,7 @@ function Navbar() {
                                 <Link
                                   key={sIdx}
                                   to={subItem.path}
+                                  onClick={() => setShowDropdown(false)}
                                   className="block p-2.5 rounded-lg hover:bg-zinc-900/80 transition-colors text-left group"
                                 >
                                   <p className="text-xs font-semibold text-zinc-200 group-hover:text-cyan-400 transition-colors">
@@ -197,9 +194,10 @@ function Navbar() {
             </ul>
           </div>
 
-          {/* Desktop Auth Actions */}
           <div className="hidden md:flex items-center gap-4">
-            {user ? (
+            {loading ? (
+              <span className="w-4 h-4 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
+            ) : user ? (
               <div className="flex items-center gap-5">
                 <Link 
                   to="/dashboard" 
@@ -208,7 +206,7 @@ function Navbar() {
                   <span className="h-6 w-6 rounded-full bg-zinc-900 border border-zinc-700 text-[11px] font-mono flex items-center justify-center text-cyan-400 group-hover:border-cyan-500 transition-colors">
                     {userInitial}
                   </span>
-                  Dashboard
+                  {user.firstName || user.username || 'Dashboard'}
                 </Link>
                 <button 
                   onClick={handleLogout}
@@ -235,7 +233,6 @@ function Navbar() {
             )}
           </div>
 
-          {/* Mobile Menu Toggle Button */}
           <div className="md:hidden flex items-center">
             <button 
               onClick={() => setIsOpen(!isOpen)} 
@@ -252,11 +249,9 @@ function Navbar() {
               </svg>
             </button>
           </div>
-
         </div>
       </nav>
 
-      {/* Mobile Drawer Menu */}
       <AnimatePresence>
         {isOpen && (
           <motion.div 
@@ -293,6 +288,7 @@ function Navbar() {
                               <Link
                                 key={sIdx}
                                 to={subItem.path}
+                                onClick={() => setIsOpen(false)}
                                 className="text-zinc-400 hover:text-cyan-400 block py-2 px-2 rounded-lg text-xs transition-colors"
                               >
                                 {subItem.label}
@@ -309,6 +305,7 @@ function Navbar() {
                   <li key={idx}>
                     <Link 
                       to={item.path} 
+                      onClick={() => setIsOpen(false)}
                       className="text-zinc-300 hover:text-cyan-400 block py-2.5 px-3 rounded-xl hover:bg-zinc-900/60 text-sm font-medium transition-colors"
                     >
                       {item.label}
@@ -320,12 +317,12 @@ function Navbar() {
 
             <div className="h-[1px] bg-zinc-900 w-full" />
 
-            {/* Mobile Auth Actions */}
             <div>
               {user ? (
                 <div className="flex flex-col gap-2">
                   <Link 
                     to="/dashboard" 
+                    onClick={() => setIsOpen(false)}
                     className="text-zinc-300 hover:text-cyan-400 flex items-center gap-3 py-2.5 px-3 text-sm font-medium transition-colors rounded-xl hover:bg-zinc-900/60"
                   >
                     <span className="h-6 w-6 rounded-full bg-zinc-900 border border-zinc-700 text-[10px] font-mono flex items-center justify-center text-cyan-400">
@@ -344,12 +341,14 @@ function Navbar() {
                 <div className="flex flex-col gap-2 pt-1">
                   <Link 
                     to="/login" 
+                    onClick={() => setIsOpen(false)}
                     className="text-zinc-300 text-center py-2.5 rounded-xl text-sm font-medium hover:bg-zinc-900/60 border border-zinc-800 transition-colors"
                   >
                     Sign In
                   </Link>
                   <Link 
                     to="/signup" 
+                    onClick={() => setIsOpen(false)}
                     className="bg-white hover:bg-zinc-200 text-black font-semibold text-center py-2.5 rounded-xl text-sm transition-all shadow-md"
                   >
                     Get Started

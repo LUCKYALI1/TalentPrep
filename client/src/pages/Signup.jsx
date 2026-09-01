@@ -1,11 +1,25 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import imgSignup from '../assets/hero.jpg'
 import api from '../utils/api'
+import { useAuth } from '../context/auth/authContext'
 
-// Static float animation helper defined outside component body
+const EyeIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+  </svg>
+);
+
+const EyeOffIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a10.016 10.016 0 013.122-.363c4.478 0 8.268 2.943 9.542 7a9.97 9.97 0 01-2.49 3.82c-.085.093-.17.185-.258.275M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 3l18 18" />
+  </svg>
+);
+
 const floatAnimation = (delay = 0, yRange = [-4, 4]) => ({
   y: yRange,
   transition: {
@@ -19,7 +33,9 @@ const floatAnimation = (delay = 0, yRange = [-4, 4]) => ({
 
 const Signup = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [apiError, setApiError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -29,221 +45,227 @@ const Signup = () => {
     mode: 'onTouched'
   });
 
-  const handleSignupSubmit = async (data) => {
+  const handleSignupSubmit = useCallback(async (data) => {
     setApiError('');
     try {
       const response = await api.post('auth/register', data);
-      console.log("Registration successful:", response.data);
-      navigate('/login');
+      
+      const token = response.data?.token;
+      const user = response.data?.user || response.data;
+
+      // Registration ke baad token mile toh direct log in karo, nahi toh login page redirect
+      if (token && user) {
+        login(user, token);
+        navigate('/');
+      } else {
+        navigate('/login');
+      }
     } catch (error) {
       console.error("Registration failed:", error);
       setApiError(error.response?.data?.message || "Registration failed. Please try again.");
     }
-  };
+  }, [login, navigate]);
 
   return (
-    <section id="signup" className="relative pt-30 w-full min-h-screen bg-black text-white flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans overflow-hidden select-none">
-      
-      {/* BACKGROUND MATRIX GRID */}
-      <div 
-        className="absolute inset-0 z-0 opacity-15 pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, #3f3f46 1px, transparent 1px),
-            linear-gradient(to bottom, #3f3f46 1px, transparent 1px)
-          `,
-          backgroundSize: "32px 32px"
-        }}
-      />
+    <section id="signup" className="relative w-full min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-4 sm:p-6 lg:p-8 font-sans overflow-hidden">
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-[128px] pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-blue-600/10 rounded-full blur-[128px] pointer-events-none" />
 
-      {/* AMBIENT GLOW */}
-      <div className="absolute top-[-20%] left-[20%] w-[600px] h-[400px] bg-indigo-600/5 blur-[130px] rounded-full pointer-events-none z-0" />
-
-      {/* CORE WORKSPACE PANEL */}
-      <div className="relative z-10 w-full max-w-4xl bg-[#09090b]/90 border border-zinc-900 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md grid grid-cols-1 md:grid-cols-12 min-h-[600px]">
-        
-        {/* LEFT COLUMN: VISUAL DASHBOARD GRID PANEL */}
-        <div className="hidden md:flex md:col-span-5 bg-zinc-950 border-r border-zinc-900/80 flex-col justify-between p-6 relative overflow-hidden group">
-          
-          <img src={imgSignup} alt="Signup Background" className="absolute inset-0 z-0 object-cover opacity-15 pointer-events-none w-full h-full" />
-          
+      <motion.div 
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="relative z-10 w-full max-w-4xl bg-zinc-900/80 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-xl grid grid-cols-1 md:grid-cols-12 min-h-[580px]"
+      >
+        <div className="hidden md:flex md:col-span-5 bg-zinc-950/60 border-r border-zinc-800/60 flex-col justify-between p-8 relative overflow-hidden">
+          <img 
+            src={imgSignup} 
+            alt="TalentPrep Visual" 
+            className="absolute inset-0 object-cover opacity-20 w-full h-full pointer-events-none select-none" 
+          />
           <div className="relative z-10">
-            <div className="text-sm font-black text-white tracking-tight">
+            <Link to="/" className="text-lg font-bold text-white tracking-tight flex items-center">
+              {/* <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" /> */}
               Talent<span className="text-cyan-400">Prep</span>
-            </div>
+            </Link>
           </div>
 
-          {/* Interactive Floating Simulation Components */}
-          <div className="relative z-10 space-y-4 my-auto">
+          <div className="relative z-10 space-y-3 my-auto">
             <motion.div 
               animate={floatAnimation(0)}
-              className="bg-white/[0.03] border border-white/10 backdrop-blur-md rounded-xl p-4 shadow-xl text-left space-y-2 relative"
+              className="bg-zinc-900/90 border border-zinc-800 p-4 rounded-xl shadow-lg backdrop-blur-md"
             >
-              <div className="absolute top-2 right-2 text-[9px] font-mono text-zinc-600">[SYS_REG]</div>
-              <p className="text-xs text-zinc-300 italic leading-relaxed">
-                "Deploying target client telemetry blocks. Generating standalone sandboxed assessment nodes."
-              </p>
-              <div className="flex items-center gap-2 pt-2 border-t border-white/5 text-[9px] font-mono text-zinc-500">
-                <span className="text-cyan-400 animate-pulse">●</span> Node Generation Ready
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-medium text-cyan-400 bg-cyan-950/60 border border-cyan-800/50 px-2 py-0.5 rounded-full">
+                  Skill Evaluation
+                </span>
+                <span className="flex h-2 w-2 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                </span>
               </div>
+              <p className="text-xs text-zinc-300 leading-relaxed font-normal">
+                "Personalized interview simulation paths adapted to your targeted technical roles."
+              </p>
             </motion.div>
 
             <motion.div 
               animate={floatAnimation(2, [4, -4])}
-              className="bg-white/[0.02] border border-white/5 backdrop-blur-sm rounded-xl p-3 shadow-md text-left flex justify-between items-center"
+              className="bg-zinc-950/80 border border-zinc-800/80 p-3 rounded-xl shadow-md backdrop-blur-sm flex justify-between items-center"
             >
               <div className="space-y-0.5">
-                <p className="text-[9px] font-mono text-zinc-500 uppercase">System Integrity</p>
-                <p className="text-xs font-bold text-zinc-200">Encryption Active</p>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Account Security</p>
+                <p className="text-xs font-medium text-zinc-200">End-to-End Encryption</p>
               </div>
-              <span className="text-[9px] font-mono text-cyan-400 bg-cyan-950/30 border border-cyan-900/50 px-2 py-0.5 rounded font-bold">
-                AES_256
+              <span className="text-[10px] text-emerald-400 bg-emerald-950/40 border border-emerald-800/50 px-2 py-0.5 rounded font-semibold">
+                Protected
               </span>
             </motion.div>
           </div>
 
-          <div className="relative z-10 text-[9px] font-mono text-zinc-600 tracking-wider">
-            [IDENT_MODULE // NEW_INSTANCE]
+          <div className="relative z-10 text-[11px] text-zinc-500 font-medium">
+            © TalentPrep AI. All rights reserved.
           </div>
         </div>
 
-        {/* RIGHT COLUMN: CORE SIGNUP INTERFACE FORM */}
-        <div className="md:col-span-7 p-8 md:p-12 flex flex-col justify-center text-left bg-black/20">
-          
-          <div className="space-y-2 mb-6">
-            <div className="inline-flex items-center gap-1.5 font-mono text-[9px] text-cyan-400 border border-cyan-950 bg-cyan-950/20 px-2 py-0.5 rounded-md uppercase tracking-wider">
-              Registration Pipeline
-            </div>
-            <h2 className="text-2xl font-black text-white tracking-tight">
-              Initialize Candidate Profile
-            </h2>
-            <p className="text-zinc-500 text-xs leading-normal font-normal">
-              Register your workspace identity key parameters to generate your predictive engine track.
+        <div className="md:col-span-7 p-8 sm:p-10 md:p-12 flex flex-col justify-center text-left bg-zinc-900/30">
+          <div className="space-y-1.5 mb-6">
+            <h1 className="text-2xl font-bold text-white tracking-tight">
+              Create your account
+            </h1>
+            <p className="text-zinc-400 text-xs">
+              Start building your personalized AI interview preparation track today.
             </p>
           </div>
 
-          {/* API ERROR ALERT */}
-          {apiError && (
-            <div className="mb-4 p-3 bg-red-950/40 border border-red-800/60 rounded-xl text-red-400 text-xs font-mono">
-              ⚠️ {apiError}
-            </div>
-          )}
+          <AnimatePresence mode="wait">
+            {apiError && (
+              <motion.div 
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="mb-5 text-xs bg-red-950/40 border border-red-800/50 text-red-300 px-3.5 py-2.5 rounded-lg flex items-center gap-2"
+              >
+                <span>⚠️</span> {apiError}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <form onSubmit={handleSubmit(handleSignupSubmit)} className="space-y-4">
-            
-            {/* FIRST NAME & LAST NAME ROW */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider block">
-                  First Designation
-                </label>
+                <label className="text-xs font-medium text-zinc-300 block">First name</label>
                 <input 
                   type="text" 
+                  disabled={isSubmitting}
                   placeholder="Alan" 
                   {...register("firstName", { required: "First name is required" })}
-                  className={`w-full bg-white/[0.02] border ${errors.firstName ? 'border-red-500 focus:border-red-500' : 'border-zinc-800 focus:border-cyan-500/80'} rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-600 focus:outline-none transition-colors duration-200`} 
+                  className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 focus:ring-2 focus:ring-cyan-500/20 transition-all disabled:opacity-50" 
                 />
-                {errors.firstName && <p className="text-[10px] text-red-400 font-mono mt-1">{errors.firstName.message}</p>}
+                {errors.firstName && <p className="text-[11px] text-red-400 pt-0.5">{errors.firstName.message}</p>}
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider block">
-                  Last Designation
-                </label>
+                <label className="text-xs font-medium text-zinc-300 block">Last name</label>
                 <input 
                   type="text" 
+                  disabled={isSubmitting}
                   placeholder="Turing" 
                   {...register("lastName", { required: "Last name is required" })}
-                  className={`w-full bg-white/[0.02] border ${errors.lastName ? 'border-red-500 focus:border-red-500' : 'border-zinc-800 focus:border-cyan-500/80'} rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-600 focus:outline-none transition-colors duration-200`} 
+                  className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 focus:ring-2 focus:ring-cyan-500/20 transition-all disabled:opacity-50" 
                 />
-                {errors.lastName && <p className="text-[10px] text-red-400 font-mono mt-1">{errors.lastName.message}</p>}
+                {errors.lastName && <p className="text-[11px] text-red-400 pt-0.5">{errors.lastName.message}</p>}
               </div>
             </div>
 
-            {/* USERNAME FIELD */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider block">
-                Workspace Handle (Username)
-              </label>
+              <label className="text-xs font-medium text-zinc-300 block">Username</label>
               <input 
                 type="text" 
-                placeholder="turing_machine" 
+                disabled={isSubmitting}
+                placeholder="alanturing" 
                 {...register("username", { 
                   required: "Username is required",
                   minLength: { value: 3, message: "Username must be at least 3 characters" }
                 })}
-                className={`w-full bg-white/[0.02] border ${errors.username ? 'border-red-500 focus:border-red-500' : 'border-zinc-800 focus:border-cyan-500/80'} rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-600 focus:outline-none transition-colors duration-200`} 
+                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 focus:ring-2 focus:ring-cyan-500/20 transition-all disabled:opacity-50" 
               />
-              {errors.username && <p className="text-[10px] text-red-400 font-mono mt-1">{errors.username.message}</p>}
+              {errors.username && <p className="text-[11px] text-red-400 pt-0.5">{errors.username.message}</p>}
             </div>
 
-            {/* EMAIL FIELD */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider block">
-                Mail Routing Address
-              </label>
+              <label className="text-xs font-medium text-zinc-300 block">Email address</label>
               <input 
                 type="email" 
-                placeholder="alan@talentprep.ai" 
+                disabled={isSubmitting}
+                placeholder="alan@company.com" 
                 {...register("email", { 
                   required: "Email is required",
                   pattern: {
                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "Invalid email address format"
+                    message: "Please enter a valid email address"
                   }
                 })}
-                className={`w-full bg-white/[0.02] border ${errors.email ? 'border-red-500 focus:border-red-500' : 'border-zinc-800 focus:border-cyan-500/80'} rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-600 focus:outline-none transition-colors duration-200`} 
+                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 focus:ring-2 focus:ring-cyan-500/20 transition-all disabled:opacity-50" 
               />
-              {errors.email && <p className="text-[10px] text-red-400 font-mono mt-1">{errors.email.message}</p>}
+              {errors.email && <p className="text-[11px] text-red-400 pt-0.5">{errors.email.message}</p>}
             </div>
 
-            {/* PASSWORD FIELD */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider block">
-                Secure Passkey Cipher
-              </label>
-              <input 
-                type="password" 
-                placeholder="••••••••••••" 
-                {...register("password", { 
-                  required: "Password is required",
-                  minLength: { value: 6, message: "Password must be at least 6 characters" }
-                })}
-                className={`w-full bg-white/[0.02] border ${errors.password ? 'border-red-500 focus:border-red-500' : 'border-zinc-800 focus:border-cyan-500/80'} rounded-xl px-4 py-3 text-xs text-white placeholder-zinc-700 focus:outline-none transition-colors duration-200`} 
-              />
-              {errors.password && <p className="text-[10px] text-red-400 font-mono mt-1">{errors.password.message}</p>}
+              <label className="text-xs font-medium text-zinc-300 block">Password</label>
+              <div className="relative">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  disabled={isSubmitting}
+                  placeholder="••••••••••••" 
+                  {...register("password", { 
+                    required: "Password is required",
+                    minLength: { value: 6, message: "Password must be at least 6 characters" }
+                  })}
+                  className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 focus:ring-2 focus:ring-cyan-500/20 transition-all disabled:opacity-50" 
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors p-1"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
+              {errors.password && <p className="text-[11px] text-red-400 pt-0.5">{errors.password.message}</p>}
             </div>
 
-            {/* REGISTER ACTION */}
             <div className="pt-2">
               <motion.button 
-                whileHover={{ scale: isSubmitting ? 1 : 1.01 }}
-                whileTap={{ scale: isSubmitting ? 1 : 0.99 }}
+                whileHover={{ scale: isSubmitting ? 1 : 1.005 }}
+                whileTap={{ scale: isSubmitting ? 1 : 0.995 }}
                 type="submit" 
                 disabled={isSubmitting}
-                className={`w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 text-white font-bold text-xs rounded-xl font-mono py-3.5 tracking-wider uppercase shadow-lg shadow-cyan-500/10 transition-opacity ${
-                  isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-95 cursor-pointer'
-                }`}
+                className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium text-xs rounded-xl py-3 transition-all shadow-md shadow-cyan-950/50 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Compiling Profile...' : 'Compile Instance Archetype ⚡'}
+                {isSubmitting ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  "Create Account"
+                )}
               </motion.button>
             </div>
           </form>
 
-          {/* SIGN IN ROUTE */}
-          <p className="text-zinc-500 text-xs font-normal mt-6 text-center sm:text-left">
-            Already mapping evaluations?{" "}
-            <Link to="/login" className="text-cyan-400 font-bold hover:underline transition-all">
-              Sync into active key
+          <p className="text-zinc-400 text-xs mt-6 text-center">
+            Already have an account?{" "}
+            <Link to="/login" className="text-cyan-400 font-medium hover:text-cyan-300 transition-colors">
+              Sign in
             </Link>
           </p>
-
         </div>
-
-      </div>
-
+      </motion.div>
     </section>
   )
 }
 
-export default Signup
+export default React.memo(Signup);

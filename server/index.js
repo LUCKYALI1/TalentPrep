@@ -1,53 +1,56 @@
 import express from "express";
 import dotenv from "dotenv";
-dotenv.config();
-import connectDB from "./config/db.js";
-import authRoutes from "./routes/auth.js";
-import profileRoutes from "./routes/profile.js";
-import cookieParser from "cookie-parser";
-import dns from 'dns';
+import dns from "dns";
 import cors from "cors";
+import cookieParser from "cookie-parser";
+
+import connectDB from "./config/db.js";
+import authRoutes from "./routes/auth.routes.js";
+import profileRoutes from "./routes/profile.js";
 import interviewRoutes from "./routes/interview.routes.js";
 
+dotenv.config();
 
-
+// Fix DNS resolution for MongoDB Atlas in restricted networks
 dns.setServers(['8.8.8.8', '1.1.1.1']);
 
-
+// Connect Database
 connectDB();
 
 const app = express();
-const router = express.Router();
 
-// Sahi CORS Settings: explicitly whitelist local frontend setup
+// CORS Settings for Vite Frontend
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true
 }));
 
+// Body Parsers & Cookie Parser
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Health Check Route
 app.get('/', (req, res) => {
-    res.json('Server is running');
+    res.json({ status: "success", message: "Server is up and running" });
 });
 
-// FIXED: Isko /api/v1/auth kiya hai taaki aapka Axios URL isse connect ho sake!
+// API Routes (v1)
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/user/profile', profileRoutes);
+app.use('/api/v1/interviews', interviewRoutes);
 
-app.use('/api/v1/interviews',  interviewRoutes);
-
-app.use((err , req , res , next) => {
+// Global Error Handler Middleware
+app.use((err, req, res, next) => {
     const statusCode = err.statusCode || 500;
     return res.status(statusCode).json({
         status: "error",
         statusCode,
         message: err.message || "Internal Server Error"
     });
-})
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
