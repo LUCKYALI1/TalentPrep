@@ -7,7 +7,8 @@ const formatUserResponse = (user) => ({
     firstName: user.firstName,
     lastName: user.lastName,
     username: user.username,
-    email: user.email
+    email: user.email,
+    credits: user.credits 
 });
 
 // 1. Register Controller
@@ -53,7 +54,7 @@ export const googleLoginController = async (req, res) => {
         // Accepts both 'credential' (Google API standard) and 'token' (Axios payload default)
         const credential = req.body.credential || req.body.token;
         if (!credential) {
-            return res.status(400).json({ message: "Google credential token is required" });
+            return res.status(400).json({ message: "Create your account" });
         }
 
         const user = await googleLoginService(credential);

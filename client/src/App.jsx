@@ -10,6 +10,7 @@ import FAQs from './pages/ProofAndFAQs'
 import Footer from './pages/Footer'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
+import Pricing from './pages/Pricing' 
 
 // Layout Modules Shell Imports
 import LandingLayout from './layouts/LandingLayout'
@@ -25,7 +26,7 @@ import UserDash from './components/UserDash'
 import Profile from './components/Profile.jsx'
 import AIInterview from './pages/AIInterview.jsx'
 import InterviewTerminal from './components/InterviewTerminal.jsx'
-import LiveTerminalRoom from './components/LiveTerminalRoom.jsx' // 👈 1. Naya Import Add Kiya
+import LiveTerminalRoom from './components/LiveTerminalRoom.jsx'
 
 // Master Composition Section for the Sequential Root Page
 const HomeRootScroll = () => {
@@ -42,7 +43,6 @@ const HomeRootScroll = () => {
 
 function App() {
   return (
-    
     <AuthProvider>
       <LastLocationProvider>
         <Navbar />
@@ -52,6 +52,16 @@ function App() {
           <Route path="/" element={<LandingLayout />}>
             <Route index element={<HomeRootScroll />} />
           </Route>
+
+          {/* 💳 PRICING & CREDIT TOP-UP ROUTE */}
+          <Route 
+            path="/pricing" 
+            element={
+              <ProtectedRoute>
+                <Pricing />
+              </ProtectedRoute>
+            } 
+          />
 
           {/* 2. SERVICES INDEPENDENT ROUTING */}
           <Route 
@@ -91,7 +101,7 @@ function App() {
             } 
           />
 
-          {/* ⚡ 2. NEW LIVE INTERVIEW TERMINAL ROOM ROUTE */}
+          {/* LIVE INTERVIEW TERMINAL ROOM ROUTE */}
           <Route 
             path="/services/interview/live/:id" 
             element={

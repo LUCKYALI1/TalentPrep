@@ -1,352 +1,358 @@
-import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
-import InterviewForm from '../components/InterviewForm'
-import { scheduleInterviewApi } from '../utils/interview.api'
-import { useAuth } from '../context/auth/authContext'
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import AIInterviewForm from '../components/AIInterviewForm';
 
-const AIInterview = () => {
-  const navigate = useNavigate()
-  const { user } = useAuth()
-  const [isScheduled, setIsScheduled] = useState(false)
-  const [showConsoleTerminal, setShowConsoleTerminal] = useState(false)
-  const [metaDetails, setMetaDetails] = useState(null)
+const gridBackgroundStyle = {
+  backgroundImage: `
+    linear-gradient(to right, #27272a 1px, transparent 1px),
+    linear-gradient(to bottom, #27272a 1px, transparent 1px)
+  `,
+  backgroundSize: '36px 36px',
+};
 
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [errorMessage, setErrorMessage] = useState(null)
+export default function AIInterview() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (showConsoleTerminal || isScheduled) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = 'unset'
-    }
-    return () => { document.body.style.overflow = 'unset' }
-  }, [showConsoleTerminal, isScheduled])
+  const handleFormSubmit = async (formData) => {
+    setIsSubmitting(true);
+    console.log('AI Interview Form Data:', formData);
 
-  const handleLaunchClick = () => {
-    setErrorMessage(null)
-    setShowConsoleTerminal(true)
-  }
-
-  const handleCloseFormModal = () => {
-    if (!isSubmitting) {
-      setShowConsoleTerminal(false)
-      setErrorMessage(null)
-    }
-  }
-  
-  // 🔥 UPDATED FUNCTION: Added isForceCreate parameter (default is false)
-  const handleFormSubmit = async (formData, isForceCreate = false) => {
-    setIsSubmitting(true)
-    setErrorMessage(null)
-
-    const currentUserId = user?._id || user?.id
-
-    if (!currentUserId) {
-      setErrorMessage("User session not found. Please log in first.")
-      setIsSubmitting(false)
-      return
-    }
-
-    try {
-      // ✅ Add forceCreate to payload
-      const payloadWithUser = {
-        ...formData,
-        userId: currentUserId,
-        forceCreate: isForceCreate
-      }
-
-      const response = await scheduleInterviewApi(payloadWithUser)
-      console.log("[SCHEDULER API FULL RESPONSE]:", response)
-
-      // 🛡️ Extracted Document cleanly from response wrapper
-      const responseData = response?.data || response;
-
-      // =========================================================
-      // 🔥 NEW LOGIC: Check if backend found an ongoing interview
-      // =========================================================
-      if (responseData.hasOngoingInterview) {
-        const userWantsNew = window.confirm(
-          "Aapka ek interview already chal raha hai.\nKya aap usko band karke naya interview start karna chahte hain?"
-        );
-
-        if (userWantsNew) {
-          // User selected 'OK' -> Call API again with forceCreate: true
-          return handleFormSubmit(formData, true);
-        } else {
-          // User selected 'Cancel' -> Go to existing interview room
-          setShowConsoleTerminal(false);
-          setIsSubmitting(false);
-          navigate(`/services/interview/terminal/${responseData.existingInterviewId}`);
-          return;
-        }
-      }
-      // =========================================================
-
-      // ✅ SUCCESS LOGIC
-      setMetaDetails(responseData)
-      setShowConsoleTerminal(false)
-      setIsScheduled(true)
-      setIsSubmitting(false) 
-
-    } catch (err) {
-      console.error("[SCHEDULER API ERROR]:", err)
-      setErrorMessage(
-        err.response?.data?.message ||
-        err.response?.data?.errors?.[0] ||
-        "Failed to schedule interview."
-      )
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleLaunchTerminalInstance = () => {
-    setIsScheduled(false);
-
-    const actualDocument = metaDetails?.data || metaDetails;
-    const targetId = actualDocument?._id || actualDocument?.id;
-
-    if (!targetId) {
-      console.error("Critical Error: Unable to extract valid MongoDB _id", metaDetails);
-      navigate('/services/interview/terminal/session-active', {
-        state: { interviewData: metaDetails }
-      });
-      return;
-    }
-
-    navigate(`/services/interview/terminal/${targetId}`, {
-      state: { interviewData: actualDocument }
-    });
+    // Dynamic API submission logic can be connected here
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setIsModalOpen(false);
+    }, 1200);
   };
 
-  const activeDoc = metaDetails?.data || metaDetails;
-
   return (
-    <div className="w-full min-h-screen bg-black text-white bg-grid-pattern relative overflow-x-hidden font-sans selection:bg-cyan-500 selection:text-black">
+    <div className="relative w-full min-h-screen bg-[#050507] text-white overflow-x-hidden font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
+      
+      {/* Background Ambient FX */}
+      <div 
+        className="absolute inset-0 z-0 opacity-15 pointer-events-none fixed"
+        style={gridBackgroundStyle}
+      />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-cyan-500/10 blur-[140px] rounded-full pointer-events-none z-0" />
 
-      {/* 🌌 Cyber Ambient Blur Shields */}
-      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-black via-transparent to-black pointer-events-none z-0" />
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/5 rounded-full blur-[120px] pointer-events-none" />
+      {/* ================= SECTION 1: HERO & PREVIEW ================= */}
+      <section className="relative z-10 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-25 pb-16 flex flex-col items-center text-center">
+        
+        {/* Status Pill */}
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-cyan-800/40 bg-cyan-950/30 text-xs text-cyan-400 font-mono tracking-wide mb-6"
+        >
+          <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+          AI-Powered Mock Interviews • TalentPrep
+        </motion.div>
 
-      {/* Main Structural Page Flow */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 space-y-32 pb-32">
+        {/* Hero Title */}
+        <motion.h1 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-[1] max-w-4xl"
+        >
+          Ace Your Next Interview with <br />
+          <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
+            Smart AI Feedback
+          </span>
+        </motion.h1>
 
-        {/* HERO SECTION */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center min-h-[75vh]">
-          <div className="lg:col-span-7 space-y-6 text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-800 bg-zinc-900/50 backdrop-blur-md">
-              <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-              <span className="text-[10px] font-mono tracking-widest text-zinc-400 uppercase">System Active // Container_v1.5.0</span>
-            </div>
+        {/* Subtitle */}
+        <motion.p 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="mt-6 text-zinc-400 text-sm sm:text-base max-w-2xl leading-relaxed"
+        >
+          Practice role-specific mock interviews. Receive real-time scoring, target your exact response mistakes, and master STAR-formatted answers.
+        </motion.p>
 
-            <h1 className="text-4xl sm:text-6xl font-black font-mono tracking-tight uppercase leading-[0.95] text-white">
-              Simulate Realtime <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-400">
-                AI Tech Interviews
-              </span>
-            </h1>
-
-            <p className="text-sm sm:text-base text-zinc-400 max-w-xl font-normal leading-relaxed">
-              Bypass static evaluation metrics. Engage with an adaptive intelligence engine calibrated to monitor real-time semantic execution, stack fluency, and live technical behavioral arrays.
-            </p>
-
-            <div className="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-              <button
-                onClick={handleLaunchClick}
-                className="px-6 py-3 bg-cyan-400 text-black font-mono text-xs font-black uppercase tracking-wider rounded-xl hover:bg-cyan-300 transition-all shadow-[4px_4px_0px_0px_rgba(6,182,212,0.25)] hover:translate-y-[-2px] hover:translate-x-[-2px] active:translate-y-[0px] active:translate-x-[0px] active:shadow-none cursor-pointer text-center"
-              >
-                [LAUNCH SCHEDULER MATRIX ⚡]
-              </button>
-            </div>
-          </div>
-
-          <div className="lg:col-span-5 relative w-full flex justify-center">
-            <div className="w-full max-w-[400px] aspect-square bg-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between">
-              <div className="flex-1 flex items-center justify-center">
-                <div className="w-40 h-40 border border-dashed border-zinc-800 rounded-full flex items-center justify-center">
-                  <div className="w-28 h-28 border border-zinc-700 rounded-full flex items-center justify-center relative">
-                    <div className="absolute inset-0 border border-cyan-500/20 rounded-full animate-ping" />
-                    <div className="w-4 h-4 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full shadow-[0_0_15px_rgba(6,182,212,0.6)]" />
-                  </div>
-                </div>
-              </div>
-              <div className="bg-black/50 border border-zinc-900 rounded-xl p-3 font-mono text-[9px] text-zinc-500 text-left">
-                <p className="text-cyan-400 font-bold">$ npm run initialize:ai-evaluator</p>
-                <p className="text-zinc-600">&gt; Parsing global configuration modules...</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* COMPUTATION FLOW */}
-        <section className="space-y-12">
-          <div className="text-center max-w-xl mx-auto space-y-2">
-            <h2 className="text-2xl font-black font-mono uppercase tracking-wide text-zinc-200">[ENGINE_COMPUTATION_FLOW]</h2>
-            <p className="text-xs text-zinc-500 font-mono">Real-time compilation pipeline flow parameters for technical evaluation instances.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-            {[
-              { step: '01', title: 'MATRIX REGISTRATION', value: 'Parameters matched from domain vectors', desc: 'System parses target skill sets, domain configurations, and selected company constraints into prompt arrays.' },
-              { step: '02', title: 'LIVE STREAM EVAL', value: 'Adaptive dialogue rendering engine', desc: 'AI dynamically tracks syntax errors, code complexity thresholds, and response patterns real-time.' },
-              { step: '03', title: 'ANALYTICS SYNC', value: 'Deep structural reports output', desc: 'Generates thorough analytics matrix mapping logic structures, stack knowledge gaps, and confidence scores.' }
-            ].map((node, index) => (
-              <div key={index} className="bg-[#09090b]/60 border border-zinc-900 rounded-2xl p-6 space-y-4 shadow-xl backdrop-blur-sm relative group hover:border-zinc-700 transition-colors">
-                <div className="absolute top-4 right-5 font-mono text-3xl font-black text-zinc-900 group-hover:text-cyan-950/40 transition-colors select-none">{node.step}</div>
-                <div className="h-6 w-6 rounded-md bg-zinc-900 border border-zinc-800 text-cyan-400 font-mono text-[10px] flex items-center justify-center font-bold">L{index + 1}</div>
-                <div className="space-y-1">
-                  <h3 className="text-sm font-bold font-mono text-white tracking-wide uppercase">{node.title}</h3>
-                  <p className="text-[10px] text-cyan-500 font-mono">{node.value}</p>
-                </div>
-                <p className="text-xs text-zinc-500 leading-relaxed font-sans">{node.desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-
-      {/* OVERLAY MODAL 1: SCHEDULER FORM */}
-      <AnimatePresence>
-        {showConsoleTerminal && !isScheduled && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-lg flex justify-center items-start pt-16 sm:pt-24 px-4 pb-12"
+        {/* Action Buttons */}
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="mt-8 flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center"
+        >
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="w-full sm:w-auto px-8 py-3.5 bg-cyan-400 hover:bg-cyan-300 text-black font-bold text-xs sm:text-sm rounded-xl transition-all shadow-lg shadow-cyan-500/20 active:scale-95 duration-200 cursor-pointer"
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: -20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -20 }}
-              transition={{ type: "spring", duration: 0.4 }}
-              className="w-full max-w-2xl relative space-y-4"
-            >
-              <div className="w-full flex justify-between items-center pr-2">
-                {errorMessage ? (
-                  <span className="text-[11px] font-mono text-red-400 bg-red-950/30 border border-red-900/50 px-3 py-1 rounded-lg">
-                    [ERROR]: {errorMessage}
-                  </span>
-                ) : <span />}
+            Start Free AI Interview
+          </button>
+          <a 
+            href="#process-section"
+            className="w-full sm:w-auto px-8 py-3.5 bg-zinc-950 hover:bg-zinc-900 text-zinc-300 font-medium text-xs sm:text-sm rounded-xl border border-zinc-800 transition-all duration-200 active:scale-95 cursor-pointer inline-flex items-center justify-center"
+          >
+            How Evaluation Works ↓
+          </a>
+        </motion.div>
 
-                <button
-                  onClick={handleCloseFormModal}
-                  disabled={isSubmitting}
-                  className="text-zinc-500 hover:text-white font-mono text-[10px] tracking-widest uppercase bg-zinc-900/80 border border-zinc-800 px-3 py-1.5 rounded-xl transition-all cursor-pointer disabled:opacity-50"
-                >
-                  [Esc // CLOSE ×]
-                </button>
+        {/* Live Evaluation Card Preview */}
+        <motion.div 
+          initial={{ opacity: 0, y: 25 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="mt-14 w-full max-w-3xl bg-[#09090b] border border-zinc-800/90 rounded-2xl p-4 sm:p-6 text-left shadow-2xl font-mono"
+        >
+          <div className="flex items-center justify-between border-b border-zinc-800/70 pb-3 mb-5">
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-red-500/80" />
+              <span className="h-2.5 w-2.5 rounded-full bg-yellow-500/80" />
+              <span className="h-2.5 w-2.5 rounded-full bg-green-500/80" />
+              <span className="text-xs text-zinc-500 ml-2">talentprep.ai/evaluation-report</span>
+            </div>
+            <span className="text-[11px] text-cyan-400 bg-cyan-950/60 border border-cyan-800/50 px-2.5 py-0.5 rounded-full">
+              AI Evaluation Complete
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div className="md:col-span-8 space-y-3">
+              <div className="bg-zinc-950/80 border border-zinc-900 p-3.5 rounded-xl">
+                <span className="text-[10px] text-zinc-500 uppercase tracking-wider block mb-1">Target Question</span>
+                <p className="text-xs text-zinc-200 font-sans font-medium">"Tell me about a time you handled a tight project deadline under pressure."</p>
               </div>
 
-              <div className="text-center space-y-2 pb-2">
-                <h2 className="text-xl sm:text-2xl font-black font-mono uppercase tracking-wide text-white">
-                  [CONFIG_SCHEDULER_TERMINAL]
-                </h2>
-                <p className="text-[11px] text-zinc-500 font-mono max-w-xs mx-auto">
-                  Inject configuration matrix flags into the local container compiler framework below.
+              <div className="bg-zinc-950/80 border border-zinc-900 p-3.5 rounded-xl space-y-1.5">
+                <div className="text-[10px] text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>▲</span> Identified Mistake
+                </div>
+                <p className="text-xs text-zinc-400 font-sans leading-relaxed">
+                  Your response focused heavily on stress rather than explicit problem-solving steps.
                 </p>
               </div>
+            </div>
 
-              <InterviewForm
-                onSubmit={handleFormSubmit}
-                isSubmitting={isSubmitting}
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <div className="md:col-span-4 bg-zinc-950/80 border border-zinc-900 p-4 rounded-xl text-center flex flex-col justify-center items-center space-y-2">
+              <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Interview Score</span>
+              <div className="text-4xl font-extrabold text-emerald-400 font-sans">
+                85<span className="text-xs text-zinc-500 font-normal">/100</span>
+              </div>
+              <span className="text-[10px] font-sans bg-emerald-950/60 text-emerald-400 border border-emerald-900/50 px-3 py-0.5 rounded-full font-semibold">
+                Strong Pass
+              </span>
+            </div>
+          </div>
+        </motion.div>
+      </section>
 
-      {/* OVERLAY MODAL 2: TELEMETRY INGESTION ACTIVE STATUS DISPLAY */}
+      {/* ================= SECTION 2: WORKFLOW & DETAILED STEP CARDS ================= */}
+      <section id="process-section" className="relative z-10 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-20 border-t border-zinc-900 space-y-12">
+        
+        {/* Section Title */}
+        <div className="text-center space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-800/40 bg-cyan-950/20 text-[11px] text-cyan-400 font-mono">
+            4-Step Evaluation Engine
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
+            How TalentPrep Assesses Your Answers
+          </h2>
+          <p className="text-zinc-400 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
+            From session initiation to diagnostic scoring, our system analyzes your responses through a 4-phase evaluation engine.
+          </p>
+        </div>
+
+        {/* 4 Detailed Process Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          {/* CARD 1 */}
+          <div className="bg-zinc-950/80 border border-zinc-800/80 p-6 rounded-2xl space-y-4 hover:border-zinc-700/80 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono text-cyan-400 bg-cyan-950/80 border border-cyan-900/60 px-3 py-1 rounded-lg">
+                Step 01
+              </span>
+              <span className="text-[10px] font-mono text-zinc-500">Configuration</span>
+            </div>
+            <h3 className="text-base font-bold text-zinc-100">Role & Context Setup</h3>
+            <p className="text-xs text-zinc-400 leading-relaxed font-normal">
+              You specify your target job position, level (Junior, Mid, Senior), and key domain skills. The AI calibrates interview questions matched strictly to industry standards.
+            </p>
+            <div className="pt-2 border-t border-zinc-900/80 flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
+              <span className="text-cyan-400">►</span> Dynamic Question Generation
+            </div>
+          </div>
+
+          {/* CARD 2 */}
+          <div className="bg-zinc-950/80 border border-zinc-800/80 p-6 rounded-2xl space-y-4 hover:border-zinc-700/80 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono text-cyan-400 bg-cyan-950/80 border border-cyan-900/60 px-3 py-1 rounded-lg">
+                Step 02
+              </span>
+              <span className="text-[10px] font-mono text-zinc-500">Analysis</span>
+            </div>
+            <h3 className="text-base font-bold text-zinc-100">STAR Structure Audit</h3>
+            <p className="text-xs text-zinc-400 leading-relaxed font-normal">
+              Your response transcript is parsed for standard behavioral components: <strong className="text-zinc-200 font-medium">Situation</strong>, <strong className="text-zinc-200 font-medium">Task</strong>, <strong className="text-zinc-200 font-medium">Action</strong>, and <strong className="text-zinc-200 font-medium">Result</strong>. Missing sections are flagged instantly.
+            </p>
+            <div className="pt-2 border-t border-zinc-900/80 flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
+              <span className="text-cyan-400">►</span> Behavioral Framework Auditing
+            </div>
+          </div>
+
+          {/* CARD 3 */}
+          <div className="bg-zinc-950/80 border border-zinc-800/80 p-6 rounded-2xl space-y-4 hover:border-zinc-700/80 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono text-cyan-400 bg-cyan-950/80 border border-cyan-900/60 px-3 py-1 rounded-lg">
+                Step 03
+              </span>
+              <span className="text-[10px] font-mono text-zinc-500">Diagnostics</span>
+            </div>
+            <h3 className="text-base font-bold text-zinc-100">Mistake & Anti-Pattern Detection</h3>
+            <p className="text-xs text-zinc-400 leading-relaxed font-normal">
+              The engine isolates flaws such as unquantified achievements, generic hand-waving, emotional tone without execution details, or missing domain key phrases.
+            </p>
+            <div className="pt-2 border-t border-zinc-900/80 flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
+              <span className="text-amber-400">▲</span> Targeted Weakness Pinpointing
+            </div>
+          </div>
+
+          {/* CARD 4 */}
+          <div className="bg-zinc-950/80 border border-zinc-800/80 p-6 rounded-2xl space-y-4 hover:border-zinc-700/80 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono text-cyan-400 bg-cyan-950/80 border border-cyan-900/60 px-3 py-1 rounded-lg">
+                Step 04
+              </span>
+              <span className="text-[10px] font-mono text-zinc-500">Output</span>
+            </div>
+            <h3 className="text-base font-bold text-zinc-100">Score & STAR Reframing</h3>
+            <p className="text-xs text-zinc-400 leading-relaxed font-normal">
+              Receive a comprehensive score out of 100, sub-metric performance bars, and an AI-rewritten version showing how your exact answer should be structured for maximum impact.
+            </p>
+            <div className="pt-2 border-t border-zinc-900/80 flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
+              <span className="text-emerald-400">★</span> Model Answer Generation
+            </div>
+          </div>
+
+        </div>
+
+        {/* Scoring Breakdown Bar */}
+        <div className="bg-zinc-950/90 border border-zinc-800/90 rounded-2xl p-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
+            <h3 className="text-xs font-mono text-zinc-300 font-semibold uppercase tracking-wider">
+              Score Calculation Weights
+            </h3>
+            <span className="text-[10px] font-mono text-zinc-500">Total: 100 Points</span>
+          </div>
+
+          <div className="space-y-3 font-mono text-xs">
+            <div className="space-y-1">
+              <div className="flex justify-between text-zinc-300">
+                <span>STAR Framework Completeness</span>
+                <span className="text-cyan-400 font-semibold">35 Points</span>
+              </div>
+              <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                <div className="h-full w-[35%] bg-cyan-400 rounded-full" />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex justify-between text-zinc-300">
+                <span>Problem Solving & Measurable Metrics</span>
+                <span className="text-blue-400 font-semibold">30 Points</span>
+              </div>
+              <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                <div className="h-full w-[30%] bg-blue-500 rounded-full" />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex justify-between text-zinc-300">
+                <span>Clarity & Technical Depth</span>
+                <span className="text-indigo-400 font-semibold">20 Points</span>
+              </div>
+              <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                <div className="h-full w-[20%] bg-indigo-500 rounded-full" />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex justify-between text-zinc-300">
+                <span>Domain Keywords & Terminology</span>
+                <span className="text-emerald-400 font-semibold">15 Points</span>
+              </div>
+              <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                <div className="h-full w-[15%] bg-emerald-400 rounded-full" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      {/* Footer */}
+      <footer className="relative z-10 w-full border-t border-zinc-900 bg-black/80 py-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-2 md:grid-cols-4 gap-4 text-center md:text-left font-mono">
+          <div>
+            <p className="text-[10px] text-cyan-400 uppercase tracking-wider">01. Real-Time</p>
+            <p className="text-xs font-semibold text-zinc-300 mt-0.5">Instant Scoring</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-cyan-400 uppercase tracking-wider">02. Detection</p>
+            <p className="text-xs font-semibold text-zinc-300 mt-0.5">Mistake Auditing</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-cyan-400 uppercase tracking-wider">03. Framework</p>
+            <p className="text-xs font-semibold text-zinc-300 mt-0.5">STAR Insights</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-cyan-400 uppercase tracking-wider">04. Scenarios</p>
+            <p className="text-xs font-semibold text-zinc-300 mt-0.5">Role Tailored</p>
+          </div>
+        </div>
+      </footer>
+
+      {/* ================= DIALOG BOX / MODAL ================= */}
       <AnimatePresence>
-        {isScheduled && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-lg flex justify-center items-start pt-16 sm:pt-24 px-4 pb-12"
-          >
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            
+            {/* Backdrop Blur */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: -20 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !isSubmitting && setIsModalOpen(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+
+            {/* Modal Dialog Card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -20 }}
-              transition={{ type: "spring", duration: 0.4 }}
-              className="w-full max-w-4xl bg-[#09090b] border border-zinc-900 rounded-3xl p-8 shadow-2xl space-y-8 text-left font-mono relative mt-4"
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.2 }}
+              className="relative z-10 w-full max-w-xl bg-[#09090b] border border-zinc-800/90 rounded-2xl p-6 shadow-2xl space-y-5"
             >
-              {/* Header Tube */}
-              <div className="w-full bg-cyan-950/20 border border-cyan-500/30 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold bg-cyan-400 text-black uppercase tracking-wider animate-pulse">
-                    ● Live Container Active
-                  </span>
-                  <h2 className="text-xl font-bold text-white mt-2">SIMULATION CONTAINER INGESTION LOCKED</h2>
-                  <p className="text-xs text-zinc-400">
-                    Target Environment initialized for <span className="text-cyan-400 font-bold">{activeDoc?.jobRole || 'MERN Full-Stack Developer'}</span>
-                  </p>
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-white">Configure AI Mock Session</h3>
+                  <p className="text-[11px] text-zinc-400 font-mono">Fill details to personalize your evaluation</p>
                 </div>
-
                 <button
-                  onClick={handleLaunchTerminalInstance}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-mono text-xs font-black uppercase tracking-wider bg-white text-black hover:bg-zinc-200 transition-all cursor-pointer shadow-md shrink-0"
+                  onClick={() => setIsModalOpen(false)}
+                  disabled={isSubmitting}
+                  className="text-zinc-500 hover:text-white text-xs px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-800 cursor-pointer"
                 >
-                  Launch Engine Terminal ⚡
+                  ✕
                 </button>
               </div>
 
-              {/* Specs & Configuration Metrics Columns */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Form Integration */}
+              <AIInterviewForm onSubmit={handleFormSubmit} isSubmitting={isSubmitting} />
 
-                {/* System Metrics Node */}
-                <div className="md:col-span-1 bg-zinc-950 border border-zinc-900 rounded-2xl p-5 space-y-4 text-xs">
-                  <h3 className="text-xs font-bold uppercase text-zinc-500 tracking-wider border-b border-zinc-900 pb-2">[SYSTEM_METRICS]</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-zinc-600 text-[10px] uppercase">Interview Session ID</p>
-                      <p className="text-cyan-400 font-bold text-[11px] truncate mt-0.5">
-                        {activeDoc?._id || 'SYS-CONTAINER-001'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-zinc-600 text-[10px] uppercase">Evaluation Target</p>
-                      <p className="text-zinc-300 font-bold mt-0.5">{activeDoc?.companyTier || 'Tier 2 (High-Growth Startups)'}</p>
-                    </div>
-                    <div>
-                      <p className="text-zinc-600 text-[10px] uppercase">Execution Pipeline</p>
-                      <p className="text-zinc-400 font-bold mt-0.5">
-                        {activeDoc?.scheduledAt
-                          ? new Date(activeDoc.scheduledAt).toLocaleString()
-                          : 'Instant Session'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Critical Platform Guidelines */}
-                <div className="md:col-span-2 bg-zinc-950 border border-zinc-900 rounded-2xl p-5 space-y-4 text-xs text-zinc-400 font-sans">
-                  <h3 className="font-mono text-xs font-bold uppercase text-zinc-500 tracking-wider border-b border-zinc-900 pb-2">[CRITICAL_INSTRUCTIONS]</h3>
-                  <ul className="space-y-2">
-                    <li className="flex items-start gap-2.5"><span className="text-cyan-400 font-mono font-bold">[01]</span> Ensure audio capture pipelines are active before launching.</li>
-                    <li className="flex items-start gap-2.5"><span className="text-cyan-400 font-mono font-bold">[02]</span> Leaving terminal canvas layout bounds will flag session state logs.</li>
-                  </ul>
-                </div>
-
-              </div>
-
-              {/* Bottom Reset Control Option */}
-              <div className="text-center pt-2">
-                <button
-                  onClick={() => setIsScheduled(false)}
-                  className="font-mono text-[10px] uppercase text-zinc-600 hover:text-red-400 tracking-widest transition-colors cursor-pointer"
-                >
-                  [× DESTROY ENGINE INSTANCE // RESET ENTIRE SCREEN]
-                </button>
-              </div>
             </motion.div>
-          </motion.div>
+
+          </div>
         )}
       </AnimatePresence>
 
     </div>
-  )
+  );
 }
-
-export default AIInterview

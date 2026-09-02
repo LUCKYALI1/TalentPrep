@@ -79,7 +79,7 @@ const Login = () => {
       const response = await api.post('auth/google', {
         credential: credentialResponse.credential
       });
-
+       
       const token = response.data?.token;
       const user = response.data?.user || response.data;
 
@@ -180,14 +180,13 @@ const Login = () => {
           </AnimatePresence>
 
           <div className="w-full flex justify-center mb-5">
-            <div className="w-full flex justify-center overflow-hidden rounded-xl border border-zinc-800 hover:border-zinc-700 transition-colors">
+            <div className="w-auto flex justify-center overflow-hidden rounded-xl border bg-white border-zinc-800 hover:border-zinc-700 transition-colors">
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={handleGoogleError}
-                theme="filled_black"
                 shape="rectangular"
                 text="continue_with"
-                width="350"
+                width="400"
               />
             </div>
           </div>
@@ -209,7 +208,7 @@ const Login = () => {
               <input 
                 type="email" 
                 disabled={isLoading}
-                placeholder="name@company.com" 
+                placeholder="Your email address" 
                 {...register("email", { 
                   required: "Email is required", 
                   pattern: {

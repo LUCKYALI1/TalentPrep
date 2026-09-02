@@ -158,7 +158,7 @@ const Signup = () => {
                 <input 
                   type="text" 
                   disabled={isSubmitting}
-                  placeholder="Alan" 
+                  placeholder="Lucky" 
                   {...register("firstName", { required: "First name is required" })}
                   className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 focus:ring-2 focus:ring-cyan-500/20 transition-all disabled:opacity-50" 
                 />
@@ -170,7 +170,7 @@ const Signup = () => {
                 <input 
                   type="text" 
                   disabled={isSubmitting}
-                  placeholder="Turing" 
+                  placeholder="Ali" 
                   {...register("lastName", { required: "Last name is required" })}
                   className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 focus:ring-2 focus:ring-cyan-500/20 transition-all disabled:opacity-50" 
                 />
@@ -183,7 +183,7 @@ const Signup = () => {
               <input 
                 type="text" 
                 disabled={isSubmitting}
-                placeholder="alanturing" 
+                placeholder="ali_" 
                 {...register("username", { 
                   required: "Username is required",
                   minLength: { value: 3, message: "Username must be at least 3 characters" }
@@ -198,7 +198,7 @@ const Signup = () => {
               <input 
                 type="email" 
                 disabled={isSubmitting}
-                placeholder="alan@company.com" 
+                placeholder="ali@talentprep.com" 
                 {...register("email", { 
                   required: "Email is required",
                   pattern: {

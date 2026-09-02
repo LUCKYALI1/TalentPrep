@@ -87,6 +87,8 @@ function Navbar() {
                       user?.email?.[0]?.toUpperCase() || 
                       'U';
 
+  const userCredits = user?.credits ?? 0;
+
   return (
     <>
       <nav 
@@ -198,7 +200,27 @@ function Navbar() {
             {loading ? (
               <span className="w-4 h-4 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
             ) : user ? (
-              <div className="flex items-center gap-5">
+              <div className="flex items-center gap-4">
+                {/* 💳 DESKTOP DYNAMIC CREDIT BADGE */}
+                {userCredits > 0 ? (
+                  <Link 
+                    to="/pricing"
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/40 border border-cyan-500/30 text-cyan-400 text-xs font-semibold shadow-[0_0_12px_rgba(6,182,212,0.15)] hover:border-cyan-400 transition-all select-none"
+                    title="Click to top-up AI credits"
+                  >
+                    <span className="animate-pulse">⚡</span>
+                    <span>{userCredits} <span className="text-[10px] opacity-80">Credits</span></span>
+                  </Link>
+                ) : (
+                  <Link 
+                    to="/pricing"
+                    className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-gradient-to-r from-red-500/20 via-pink-500/20 to-cyan-500/20 border border-cyan-400 text-cyan-300 hover:text-white text-xs font-bold transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:scale-105 active:scale-95 animate-pulse"
+                  >
+                    <span>⚡</span>
+                    <span>Buy Credits</span>
+                  </Link>
+                )}
+
                 <Link 
                   to="/dashboard" 
                   className="text-zinc-300 hover:text-cyan-400 flex items-center gap-2 transition-colors text-sm font-medium group"
@@ -320,6 +342,31 @@ function Navbar() {
             <div>
               {user ? (
                 <div className="flex flex-col gap-2">
+                  {/* 💳 MOBILE DYNAMIC CREDIT BADGE */}
+                  {userCredits > 0 ? (
+                    <Link 
+                      to="/pricing"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center justify-between py-2 px-3 bg-cyan-950/30 border border-cyan-500/20 rounded-xl text-xs font-medium text-cyan-400 mb-1 select-none hover:border-cyan-400 transition-colors"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span className="animate-pulse">⚡</span> Available Credits
+                      </span>
+                      <span className="font-bold text-sm text-cyan-300">{userCredits}</span>
+                    </Link>
+                  ) : (
+                    <Link 
+                      to="/pricing"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center justify-between py-2 px-3 bg-gradient-to-r from-red-500/20 via-pink-500/20 to-cyan-500/20 border border-cyan-400 rounded-xl text-xs font-bold text-cyan-300 mb-1 select-none animate-pulse"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span>⚡</span> Out of Credits
+                      </span>
+                      <span className="text-white bg-cyan-500/30 px-2 py-0.5 rounded-md text-[10px] border border-cyan-400/50">Buy Now</span>
+                    </Link>
+                  )}
+
                   <Link 
                     to="/dashboard" 
                     onClick={() => setIsOpen(false)}

@@ -16,6 +16,7 @@ export const registerUserService = async (userData) => {
         throw new Error(`${conflict} is already registered.`);
     }
 
+    // Credits automatically 3 set ho jayenge schema default se
     const newUser = await User.create({
         firstName,
         lastName,
@@ -45,7 +46,6 @@ export const loginUserService = async (email, password) => {
 
 // 3. Google Login / Register Service
 export const googleLoginService = async (credential) => {
-    // Google token verify karein
     const ticket = await googleClient.verifyIdToken({
         idToken: credential,
         audience: process.env.GOOGLE_CLIENT_ID,
@@ -57,7 +57,6 @@ export const googleLoginService = async (credential) => {
     let user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
-        // Safe username generation
         const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
         let username = baseUsername.toLowerCase();
         if (username.length < 3) username = username + "user";
@@ -67,9 +66,9 @@ export const googleLoginService = async (credential) => {
             username = `${username}${Math.floor(1000 + Math.random() * 9000)}`;
         }
 
-        // Dummy password for Google users
         const dummyPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
 
+        // Naye Google User ko bhi automatic 3 credits milenge
         user = await User.create({
             firstName: given_name || "Google",
             lastName: family_name || "User",

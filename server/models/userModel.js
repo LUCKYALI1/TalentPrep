@@ -34,6 +34,12 @@ const userSchema = new mongoose.Schema(
             required: [true, "Password is required"],
             minlength: [6, "Password must be at least 6 characters"],
         },
+        // 💳 CREDIT SYSTEM FIELD (Default: 3 Credits)
+        credits: {
+            type: Number,
+            default: 3,
+            min: [0, "Credits cannot be negative"],
+        },
     },
     { timestamps: true }
 );
