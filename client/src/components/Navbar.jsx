@@ -13,6 +13,7 @@ const navItems = [
       { label: 'AI Interview Practice', path: '/services/interview', desc: 'Mock interviews with instant AI feedback' }
     ]
   },
+  { label: 'Pricing', path: '/pricing' },
   { label: 'About', path: '/about' },
 ];
 

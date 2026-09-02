@@ -65,7 +65,7 @@ export default function Pricing() {
 
     const isLoaded = await loadRazorpayScript();
     if (!isLoaded) {
-      alert('Razorpay SDK failed to load. Check your network connection.');
+      alert('Razorpay SDK load nahi ho paya. AdBlocker disable karke dekhein.');
       setLoadingPlan(null);
       return;
     }
@@ -74,20 +74,35 @@ export default function Pricing() {
       const token = localStorage.getItem('token');
 
       // Step 1: Request Backend for Order Creation
-      const { data } = await axios.post(
+      const res = await axios.post(
         '/api/payment/create-order',
         { planId: plan.id },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      // Backend response safe handling (data.order ya direct data)
+      const orderData = res.data?.order || res.data;
+
+      if (!orderData || !orderData.id) {
+        alert('Order ID receive nahi hui backend se.');
+        setLoadingPlan(null);
+        return;
+      }
+
+      // Key fallback (Vite vs CRA compatibility)
+      const razorpayKey = 
+        (typeof import.meta !== 'undefined' && import.meta.env?.VITE_RAZORPAY_KEY_ID) ||
+        process.env.REACT_APP_RAZORPAY_KEY_ID ||
+        'rzp_test_dummyKey123'; // Apni actual test key yahan paste karke test karein
+
       // Step 2: Configure Razorpay Gateway Modal
       const options = {
-        key: process.env.REACT_APP_RAZORPAY_KEY_ID || 'rzp_test_dummyKey123',
-        amount: data.order.amount,
-        currency: 'INR',
+        key: razorpayKey,
+        amount: orderData.amount,
+        currency: orderData.currency || 'INR',
         name: 'TalentPrep AI',
         description: `Purchase ${plan.credits} AI Credits`,
-        order_id: data.order.id,
+        order_id: orderData.id,
         handler: async function (response) {
           try {
             // Step 3: Verify Payment Signature on Backend
@@ -122,9 +137,16 @@ export default function Pricing() {
       };
 
       const razorpayInstance = new window.Razorpay(options);
+
+      // Failure listener add kiya taaki error clear dikhe
+      razorpayInstance.on('payment.failed', function (response) {
+        console.error('Payment Failed:', response.error);
+        alert(`Payment Failed: ${response.error.description}`);
+      });
+
       razorpayInstance.open();
     } catch (error) {
-      console.error('Order creation error:', error);
+      console.error('Order creation error:', error?.response?.data || error.message);
       alert('Could not initialize payment order.');
     } finally {
       setLoadingPlan(null);

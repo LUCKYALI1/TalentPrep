@@ -1,75 +1,100 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import api from '../../utils/api'; 
 
-const UserContext = createContext();
+export const AuthContext = createContext(null);
+export const UserContext = AuthContext; // Alias for seamless compatibility
 
-export const UserProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (error) {
+      console.error("Failed to parse cached user:", error);
+      return null;
+    }
+  });
+  
+  const [loading, setLoading] = useState(true);
 
-    const fetchUserData = async () => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            setUser(null);
-            setLoading(false);
-            return;
-        }
+  useEffect(() => {
+    const verifyUserSession = async () => {
+      const token = localStorage.getItem('token');
+      const savedUser = localStorage.getItem('user');
 
-        try {
-            const res = await axios.get('/api/auth/me', {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            }); 
-            setUser(res.data.user);
-        } catch (error) {
-            console.error("Error fetching user data:", error);
-            setUser(null);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const deductCredit = () => {
-        if (user) {
-            setUser((prev) => ({
-                ...prev,
-                credits: Math.max(0, (prev?.credits || 0) - 1)
-            }));
-        }
-    };
-
-    const addCredits = (amount) => {
-        if (user) {
-            setUser((prev) => ({
-                ...prev,
-                credits: (prev?.credits || 0) + amount
-            }));
-        }
-    };
-
-    const logout = () => {
+      // Token ya saved user na hone par skip backend call
+      if (!token && !savedUser) {
         setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await api.get('auth/verify'); 
+        const verifiedUser = response.data?.user || response.data;
+        
+        setUser(verifiedUser);
+        localStorage.setItem('user', JSON.stringify(verifiedUser));
+      } catch (error) {
+        console.error("Session verification failed:", error);
+        setUser(null);
+        localStorage.removeItem('user');
         localStorage.removeItem('token');
+      } finally {
+        setLoading(false);
+      }
     };
 
-    useEffect(() => {
-        fetchUserData();
-    }, []);
+    verifyUserSession();
+  }, []);
 
-    return (
-        <UserContext.Provider value={{ 
-            user, 
-            setUser, 
-            loading, 
-            fetchUserData, 
-            deductCredit, 
-            addCredits,
-            logout 
-        }}>
-            {children}
-        </UserContext.Provider>
-    );
+  const login = useCallback((userData, token) => {
+    if (token) localStorage.setItem('token', token);
+    if (userData) localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+  }, []);
+  
+  const logout = useCallback(async () => {
+    try {
+      await api.post('auth/logout');
+    } catch (err) {
+      console.error("Logout handshake failed:", err);
+    } finally {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      setUser(null);
+    }
+  }, []);
+
+  const value = useMemo(() => ({
+    user,
+    setUser,
+    loading,
+    login,
+    logout
+  }), [user, loading, login, logout]);
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
-export const useUser = () => useContext(UserContext);
+export const UserProvider = AuthProvider; // Alias for seamless compatibility
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+export const useUser = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useUser must be used within an AuthProvider');
+  }
+  return context;
+};
