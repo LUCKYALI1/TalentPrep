@@ -1,100 +1,72 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import api from '../../utils/api'; 
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import api from '../../utils/api';
 
-export const AuthContext = createContext(null);
-export const UserContext = AuthContext; // Alias for seamless compatibility
+const UserContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
+export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
       const savedUser = localStorage.getItem('user');
       return savedUser ? JSON.parse(savedUser) : null;
     } catch (error) {
-      console.error("Failed to parse cached user:", error);
+      console.error('Error reading user from localStorage:', error);
       return null;
     }
   });
   
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const verifyUserSession = async () => {
-      const token = localStorage.getItem('token');
-      const savedUser = localStorage.getItem('user');
-
-      // Token ya saved user na hone par skip backend call
-      if (!token && !savedUser) {
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const response = await api.get('auth/verify'); 
-        const verifiedUser = response.data?.user || response.data;
-        
-        setUser(verifiedUser);
-        localStorage.setItem('user', JSON.stringify(verifiedUser));
-      } catch (error) {
-        console.error("Session verification failed:", error);
-        setUser(null);
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    verifyUserSession();
+  // Instant state update aur localStorage synchronization helper
+  const updateUser = useCallback((updatedData) => {
+    setUser((prevUser) => {
+      const newUserData = typeof updatedData === 'function' 
+        ? updatedData(prevUser) 
+        : { ...prevUser, ...updatedData };
+      
+      localStorage.setItem('user', JSON.stringify(newUserData));
+      return newUserData;
+    });
   }, []);
 
-  const login = useCallback((userData, token) => {
-    if (token) localStorage.setItem('token', token);
-    if (userData) localStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
-  }, []);
-  
-  const logout = useCallback(async () => {
-    try {
-      await api.post('auth/logout');
-    } catch (err) {
-      console.error("Logout handshake failed:", err);
-    } finally {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
+  // Backend se fresh user data fetch karne ke liye
+  const fetchUserData = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
       setUser(null);
+      setLoading(false);
+      return null;
+    }
+
+    try {
+      const response = await api.get('/auth/verify');
+      const verifiedUser = response.data?.user || response.data;
+      
+      setUser(verifiedUser);
+      localStorage.setItem('user', JSON.stringify(verifiedUser));
+      return verifiedUser;
+    } catch (error) {
+      console.error('Failed to fetch user data:', error);
+      return null;
+    } finally {
+      setLoading(false);
     }
   }, []);
 
-  const value = useMemo(() => ({
-    user,
-    setUser,
-    loading,
-    login,
-    logout
-  }), [user, loading, login, logout]);
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData]);
 
   return (
-    <AuthContext.Provider value={value}>
+    <UserContext.Provider value={{ user, setUser, updateUser, fetchUserData, loading }}>
       {children}
-    </AuthContext.Provider>
+    </UserContext.Provider>
   );
 };
 
-export const UserProvider = AuthProvider; // Alias for seamless compatibility
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
 export const useUser = () => {
-  const context = useContext(AuthContext);
+  const context = useContext(UserContext);
   if (!context) {
-    throw new Error('useUser must be used within an AuthProvider');
+    throw new Error('useUser must be used within a UserProvider');
   }
   return context;
 };

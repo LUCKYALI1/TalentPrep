@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import dns from "dns";
+dotenv.config();
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
@@ -8,8 +9,8 @@ import connectDB from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import profileRoutes from "./routes/profile.js";
 import interviewRoutes from "./routes/interview.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
 
-dotenv.config();
 
 // Fix DNS resolution for MongoDB Atlas in restricted networks
 dns.setServers(['8.8.8.8', '1.1.1.1']);
@@ -39,6 +40,10 @@ app.get('/', (req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/user/profile', profileRoutes);
 app.use('/api/v1/interviews', interviewRoutes);
+
+
+// Payments Routes (v1)
+app.use('/api/v1/payment', paymentRoutes);
 
 // Global Error Handler Middleware
 app.use((err, req, res, next) => {

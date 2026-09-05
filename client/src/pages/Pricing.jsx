@@ -1,59 +1,15 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useUser } from '../context/userContext/UserContext.jsx';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-
-const plans = [
-  {
-    id: 'plan_30',
-    name: 'Starter Booster',
-    price: 1000,
-    credits: 30,
-    popular: false,
-    description: 'Perfect for resume checks and targeted interview preparation.',
-    features: [
-      '30 AI Credits',
-      'Instant ATS Resume Analysis',
-      'AI Mock Interview Feedback',
-      'Standard Processing Speed',
-      'Email Support'
-    ]
-  },
-  {
-    id: 'plan_60',
-    name: 'Pro Career Pack',
-    price: 1500,
-    credits: 60,
-    popular: true,
-    description: 'Best value for aggressive job hunting and deep preparation.',
-    features: [
-      '60 AI Credits (Save ₹500)',
-      'Deep ATS Optimization & Keyword Mapping',
-      'Unlimited Mock Interview Rounds',
-      'Priority AI Processing Speed',
-      'Detailed Performance Analytics',
-      '24/7 Dedicated Support'
-    ]
-  }
-];
+import Swal from 'sweetalert2';
+import { useUser } from '../context/userContext/UserContext.jsx';
+import { plans } from '../data/plans.js';
+import { loadRazorpayScript, createOrderApi, verifyPaymentApi } from '../services/payment.service.js';
 
 export default function Pricing() {
-  const { user, fetchUserData } = useUser();
+  const { user, updateUser, fetchUserData } = useUser();
   const navigate = useNavigate();
   const [loadingPlan, setLoadingPlan] = useState(null);
-
-  // Script Loader for Razorpay Checkout JS
-  const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
-      if (window.Razorpay) return resolve(true);
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
 
   const handlePayment = async (plan) => {
     if (!user) {
@@ -63,9 +19,19 @@ export default function Pricing() {
 
     setLoadingPlan(plan.id);
 
+    // Load Razorpay Script
     const isLoaded = await loadRazorpayScript();
     if (!isLoaded) {
-      alert('Razorpay SDK load nahi ho paya. AdBlocker disable karke dekhein.');
+      Swal.fire({
+        title: 'Error!',
+        text: 'Razorpay SDK load nahi ho paya. AdBlocker disable karke dekhein.',
+        icon: 'error',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#ef4444',
+        background: '#09090b',
+        color: '#ffffff',
+        customClass: { popup: 'border border-zinc-800 rounded-2xl' }
+      });
       setLoadingPlan(null);
       return;
     }
@@ -73,29 +39,27 @@ export default function Pricing() {
     try {
       const token = localStorage.getItem('token');
 
-      // Step 1: Request Backend for Order Creation
-      const res = await axios.post(
-        '/api/payment/create-order',
-        { planId: plan.id },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      // Backend response safe handling (data.order ya direct data)
-      const orderData = res.data?.order || res.data;
+      // Step 1: Create Order via Service
+      const orderData = await createOrderApi(plan.id, token);
 
       if (!orderData || !orderData.id) {
-        alert('Order ID receive nahi hui backend se.');
+        Swal.fire({
+          title: 'Error!',
+          text: 'Order ID receive nahi hui backend se.',
+          icon: 'error',
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#ef4444',
+          background: '#09090b',
+          color: '#ffffff',
+          customClass: { popup: 'border border-zinc-800 rounded-2xl' }
+        });
         setLoadingPlan(null);
         return;
       }
 
-      // Key fallback (Vite vs CRA compatibility)
-      const razorpayKey = 
-        (typeof import.meta !== 'undefined' && import.meta.env?.VITE_RAZORPAY_KEY_ID) ||
-        process.env.REACT_APP_RAZORPAY_KEY_ID ||
-        'rzp_test_dummyKey123'; // Apni actual test key yahan paste karke test karein
+      const razorpayKey = import.meta.env?.VITE_RAZORPAY_KEY_ID;
 
-      // Step 2: Configure Razorpay Gateway Modal
+      // Step 2: Configure Razorpay Options
       const options = {
         key: razorpayKey,
         amount: orderData.amount,
@@ -105,26 +69,59 @@ export default function Pricing() {
         order_id: orderData.id,
         handler: async function (response) {
           try {
-            // Step 3: Verify Payment Signature on Backend
-            const verifyRes = await axios.post(
-              '/api/payment/verify-payment',
+            // Step 3: Verify Payment via Service
+            const verifyRes = await verifyPaymentApi(
               {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
                 creditsToAdd: plan.credits
               },
-              { headers: { Authorization: `Bearer ${token}` } }
+              token
             );
 
-            if (verifyRes.data.success) {
-              if (fetchUserData) await fetchUserData();
-              alert(`⚡ Success! ${plan.credits} credits added to your account.`);
-              navigate('/dashboard');
+            if (verifyRes.success) {
+              // 1. Context state update
+              if (verifyRes.credits !== undefined) {
+                updateUser({ credits: verifyRes.credits });
+              } else if (verifyRes.user) {
+                updateUser(verifyRes.user);
+              }
+
+              // 2. Backend se fresh data re-fetch karo
+              if (fetchUserData) {
+                await fetchUserData();
+              }
+
+              // 3. Success Popup aur Hard Refresh
+              Swal.fire({
+                title: '⚡ Success!',
+                text: `${plan.credits} credits added to your account!`,
+                icon: 'success',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#06B6D4',
+                background: '#09090b',
+                color: '#ffffff',
+                customClass: { popup: 'border border-zinc-800 rounded-2xl' }
+              }).then((result) => {
+                if (result.isConfirmed) {
+                  // Hard refresh taaki Navbar, LocalStorage aur Context fully sync ho jayein
+                  window.location.href = '/';
+                }
+              });
             }
           } catch (err) {
             console.error('Verification error:', err);
-            alert('Payment verification failed. Please contact support.');
+            Swal.fire({
+              title: 'Verification Failed',
+              text: 'Payment verification failed. Please contact support.',
+              icon: 'error',
+              confirmButtonText: 'OK',
+              confirmButtonColor: '#ef4444',
+              background: '#09090b',
+              color: '#ffffff',
+              customClass: { popup: 'border border-zinc-800 rounded-2xl' }
+            });
           }
         },
         prefill: {
@@ -138,16 +135,33 @@ export default function Pricing() {
 
       const razorpayInstance = new window.Razorpay(options);
 
-      // Failure listener add kiya taaki error clear dikhe
       razorpayInstance.on('payment.failed', function (response) {
         console.error('Payment Failed:', response.error);
-        alert(`Payment Failed: ${response.error.description}`);
+        Swal.fire({
+          title: 'Payment Failed',
+          text: response.error.description || 'Transaction failed.',
+          icon: 'error',
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#ef4444',
+          background: '#09090b',
+          color: '#ffffff',
+          customClass: { popup: 'border border-zinc-800 rounded-2xl' }
+        });
       });
 
       razorpayInstance.open();
     } catch (error) {
       console.error('Order creation error:', error?.response?.data || error.message);
-      alert('Could not initialize payment order.');
+      Swal.fire({
+        title: 'Error',
+        text: 'Could not initialize payment order.',
+        icon: 'error',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#ef4444',
+        background: '#09090b',
+        color: '#ffffff',
+        customClass: { popup: 'border border-zinc-800 rounded-2xl' }
+      });
     } finally {
       setLoadingPlan(null);
     }
@@ -176,8 +190,8 @@ export default function Pricing() {
             whileHover={{ y: -6, scale: 1.01 }}
             transition={{ type: 'spring', stiffness: 300, damping: 22 }}
             className={`relative rounded-3xl p-8 bg-[#09090b] border ${
-              plan.popular 
-                ? 'border-cyan-500/80 shadow-[0_0_35px_rgba(6,182,212,0.18)]' 
+              plan.popular
+                ? 'border-cyan-500/80 shadow-[0_0_35px_rgba(6,182,212,0.18)]'
                 : 'border-zinc-800'
             } flex flex-col justify-between backdrop-blur-xl`}
           >

@@ -21,7 +21,6 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       const savedUser = localStorage.getItem('user');
 
-      // Token ya saved user na hone par skip backend call
       if (!token && !savedUser) {
         setUser(null);
         setLoading(false);
@@ -65,12 +64,24 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  // ⚡ Live State Update: Refreshes user object everywhere without page reload
+  const updateUser = useCallback((updatedUserData) => {
+    setUser((prevUser) => {
+      const newUser = typeof updatedUserData === 'function' 
+        ? updatedUserData(prevUser) 
+        : { ...prevUser, ...updatedUserData };
+      localStorage.setItem('user', JSON.stringify(newUser));
+      return newUser;
+    });
+  }, []);
+
   const value = useMemo(() => ({
     user,
     loading,
     login,
-    logout
-  }), [user, loading, login, logout]);
+    logout,
+    updateUser
+  }), [user, loading, login, logout, updateUser]);
 
   return (
     <AuthContext.Provider value={value}>

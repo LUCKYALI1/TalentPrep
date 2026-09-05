@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/auth/authContext';
+import { useUser } from '../context/userContext/UserContext.jsx';
 
 const navItems = [
   { label: 'Home', path: '/' },
@@ -41,7 +42,11 @@ const dropdownVariants = {
 function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, loading } = useAuth(); 
+  const { logout, loading, user: authUser } = useAuth(); 
+  const { user: customUser } = useUser();
+
+  // User state fallback to ensure sync between useUser & useAuth
+  const user = customUser || authUser;
 
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -104,10 +109,14 @@ function Navbar() {
             <span>Talent<span className="text-cyan-400">Prep</span></span>
           </Link>
           
+          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center"> 
             <ul className="flex items-center gap-8"> 
               {navItems.map((item, idx) => {
-                const isActive = location.pathname === item.path;
+                const isActive = item.path === '/' 
+                  ? location.pathname === '/' 
+                  : location.pathname.startsWith(item.path) || 
+                    (item.dropdown && item.dropdown.some(subItem => location.pathname === subItem.path));
 
                 if (item.dropdown) {
                   return (
@@ -131,7 +140,9 @@ function Navbar() {
                           animate={showDropdown || isActive ? "hover" : "initial"}
                           className="flex items-center gap-1 font-medium text-sm tracking-wide select-none"
                         >
-                          {item.label}
+                          <span className={isActive ? 'text-cyan-400 font-semibold' : ''}>
+                            {item.label}
+                          </span>
                           <span className={`text-[9px] font-mono transition-transform duration-200 ${showDropdown ? 'rotate-180 text-cyan-400' : 'text-zinc-500'}`}>
                             ▼
                           </span>
@@ -197,12 +208,12 @@ function Navbar() {
             </ul>
           </div>
 
+          {/* User Auth Section (Desktop) */}
           <div className="hidden md:flex items-center gap-4">
             {loading ? (
               <span className="w-4 h-4 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
             ) : user ? (
               <div className="flex items-center gap-4">
-                {/* 💳 DESKTOP DYNAMIC CREDIT BADGE */}
                 {userCredits > 0 ? (
                   <Link 
                     to="/pricing"
@@ -256,6 +267,7 @@ function Navbar() {
             )}
           </div>
 
+          {/* Mobile Hamburger Button */}
           <div className="md:hidden flex items-center">
             <button 
               onClick={() => setIsOpen(!isOpen)} 
@@ -275,6 +287,7 @@ function Navbar() {
         </div>
       </nav>
 
+      {/* Mobile Menu Dropdown */}
       <AnimatePresence>
         {isOpen && (
           <motion.div 
@@ -340,10 +353,10 @@ function Navbar() {
 
             <div className="h-[1px] bg-zinc-900 w-full" />
 
+            {/* Mobile Auth Options */}
             <div>
               {user ? (
                 <div className="flex flex-col gap-2">
-                  {/* 💳 MOBILE DYNAMIC CREDIT BADGE */}
                   {userCredits > 0 ? (
                     <Link 
                       to="/pricing"
@@ -411,4 +424,4 @@ function Navbar() {
   );
 }
 
-export default React.memo(Navbar);
+export default Navbar;
