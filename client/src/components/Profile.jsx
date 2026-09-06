@@ -1,370 +1,270 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
-import api from '../utils/api';
-
-const INITIAL_PROFILE = {
-  firstName: '',
-  lastName: '',
-  avatar: { url: '', public_id: '' },
-  address: '',
-  alternativeEmail: '',
-  skills: '',
-  jobRole: '',
-  currentCompany: '',
-  bio: '',
-  experienceYears: 0,
-  githubUrl: '',
-  linkedinUrl: ''
-};
 
 function Profile() {
-  const { user, updateUser } = useAuth();
-  const fileInputRef = useRef(null);
-  
-  const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [feedback, setFeedback] = useState({ error: '', success: '' });
+  const { user } = useAuth();
 
-  const [profileData, setProfileData] = useState(INITIAL_PROFILE);
-  const [avatarPreview, setAvatarPreview] = useState('');
-
-  const fetchProfile = async () => {
-    try {
-      const res = await api.get('/user/profile/get-profile'); 
-      if (res.data) {
-        const backendAvatar = typeof res.data.avatar === 'string' 
-          ? { url: res.data.avatar, public_id: '' }
-          : (res.data.avatar || { url: '', public_id: '' });
-
-        setProfileData({
-          ...res.data,
-          avatar: backendAvatar,
-          skills: Array.isArray(res.data.skills) ? res.data.skills.join(', ') : (res.data.skills || '')
-        });
-      }
-    } catch (err) {
-      console.error("Failed to fetch profile data:", err);
+  // Primary user profile attributes with safe fallbacks
+  const profileData = {
+    fullName: user?.firstName ? `${user.firstName} ${user?.lastName || ''}`.trim() : 'Lucky Ali',
+    title: 'Full-Stack & AI/ML Engineer',
+    email: user?.email || 'lucky.ali@example.com',
+    location: 'Ghaziabad / NCR, India',
+    degree: 'B.Tech in Computer Science (AI & ML)',
+    institution: 'ABES Engineering College',
+    graduationYear: '2026',
+    bio: 'Passionate Software Engineer specializing in scalable full-stack web architectures, AI/ML integrations, and system design. Experienced in building high-performance SaaS applications and solving complex algorithmic challenges.',
+    avatarUrl: user?.avatar?.url || user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
+    stats: {
+      leetcodeSolved: '600+',
+      codingNinjasSolved: '300+',
+      atsScore: '88%',
+      overallRating: '4.9 / 5.0',
+    },
+    skills: {
+      frontend: ['React', 'Next.js 15', 'TypeScript', 'Tailwind CSS', 'GSAP', 'Framer Motion'],
+      backend: ['Node.js', 'Express.js', 'PostgreSQL', 'MongoDB', 'REST APIs', 'Microservices'],
+      languages: ['C++', 'JavaScript', 'Python', 'Java', 'SQL'],
+      tools: ['Git / GitHub', 'Docker', 'Kubernetes', 'Firebase', 'Postman'],
+    },
+    certifications: [
+      { title: 'TypeScript Certification', issuer: 'Infosys Springboard', year: '2026' },
+      { title: 'Programming Essentials in Python', issuer: 'Cisco Networking Academy', year: '2026' },
+      { title: 'Data Analysis Professional Certificate', issuer: 'IBM', year: '2025' },
+    ],
+    links: {
+      github: 'https://github.com',
+      linkedin: 'https://linkedin.com',
+      portfolio: 'https://onlyone.dev',
     }
   };
-
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setProfileData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      setFeedback({ error: 'Image size must be under 2MB.', success: '' });
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setAvatarPreview(reader.result);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleUpdateSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setFeedback({ error: '', success: '' });
-
-    const formPayload = new FormData();
-    Object.keys(profileData).forEach(key => {
-      if (key !== 'avatar') {
-        formPayload.append(key, profileData[key] ?? '');
-      }
-    });
-
-    if (fileInputRef.current?.files[0]) {
-      formPayload.append('avatar', fileInputRef.current.files[0]);
-    }
-
-    try {
-      const config = { headers: { 'Content-Type': 'multipart/form-data' } };
-      const res = await api.put('/user/profile/update-profile', formPayload, config);
-      
-      setFeedback({ success: res.data.message || 'Profile updated successfully!', error: '' });
-      setIsEditing(false);
-      setAvatarPreview('');
-      
-      if (updateUser && res.data.profile) {
-        updateUser(res.data.profile);
-      }
-
-      await fetchProfile();
-    } catch (err) {
-      setFeedback({ error: err.response?.data?.message || 'Failed to update profile.', success: '' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getInputStyles = (disabled) => `
-    w-full px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-medium transition-all duration-150 outline-none
-    ${disabled 
-      ? 'bg-zinc-950/40 border-zinc-900 text-zinc-500 cursor-not-allowed' 
-      : 'bg-zinc-900 border-zinc-800 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500'
-    }
-  `.trim();
-    const creditsLeft = user?.credits ?? profileData?.credits ?? 0;
-    const isPremium = user?.isPremium || user?.hasPremium || creditsLeft > 3; 
 
   return (
-    <div className="w-full space-y-6 pb-12 text-zinc-300">
+    <div className="w-full space-y-8 pb-12 text-zinc-300">
       
-      {/* Header Section */}
-      <div className="border-b border-zinc-900 pb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-            Personal Profile
-          </h1>
-          <p className="text-xs text-zinc-400 mt-1">
-            Manage your personal credentials, experience, and system metrics.
-          </p>
+      {/* Hero Header Card */}
+      <motion.div 
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="relative overflow-hidden bg-zinc-950/60 border border-zinc-900 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl"
+      >
+        {/* Ambient Glow Background */}
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-cyan-500/10 blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-500/10 blur-3xl rounded-full pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
+          {/* Avatar with Glow Border */}
+          <div className="relative shrink-0">
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-2 border-cyan-500/40 p-1 bg-zinc-900 shadow-xl">
+              <img 
+                src={profileData.avatarUrl} 
+                alt={profileData.fullName}
+                className="w-full h-full object-cover rounded-xl"
+              />
+            </div>
+            <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-4 border-zinc-950 rounded-full" title="Active Account" />
+          </div>
+
+          {/* User Essential Info */}
+          <div className="flex-1 space-y-3">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                  {profileData.fullName}
+                </h1>
+                <p className="text-sm font-semibold text-cyan-400 mt-0.5">
+                  {profileData.title}
+                </p>
+              </div>
+
+              {/* External Links */}
+              <div className="flex items-center justify-center md:justify-end gap-2">
+                {Object.entries(profileData.links).map(([platform, url]) => (
+                  <a
+                    key={platform}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-xl border border-zinc-800 bg-zinc-900/80 hover:bg-zinc-800 hover:border-zinc-700 text-zinc-300 text-xs font-semibold capitalize transition-all"
+                  >
+                    {platform}
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Badges */}
+            <div className="flex flex-wrap justify-center md:justify-start gap-2 pt-1 text-xs">
+              <span className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 flex items-center gap-1.5">
+                <span className="text-cyan-400">🎓</span> {profileData.institution}
+              </span>
+              <span className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 flex items-center gap-1.5">
+                <span className="text-indigo-400">📍</span> {profileData.location}
+              </span>
+              <span className="px-3 py-1 rounded-full bg-cyan-950/40 border border-cyan-900/50 text-cyan-300 flex items-center gap-1.5 font-mono">
+                Class of {profileData.graduationYear}
+              </span>
+            </div>
+          </div>
         </div>
+      </motion.div>
+
+      {/* Competitive Programming & Stats Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         
-        <button
-          type="button"
-          onClick={() => { 
-            if (isEditing) { 
-              setFeedback({ error: '', success: '' });
-              setAvatarPreview('');
-            } 
-            setIsEditing(!isEditing); 
-          }}
-          className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all border cursor-pointer ${
-            isEditing 
-              ? 'border-red-900/60 bg-red-950/20 text-red-400 hover:bg-red-900/30' 
-              : 'border-zinc-800 bg-zinc-900 text-white hover:border-zinc-700'
-          }`}
+        <motion.div 
+          whileHover={{ y: -2 }}
+          className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-4 shadow-xl text-center sm:text-left"
         >
-          {isEditing ? 'Cancel Editing' : 'Edit Profile'}
-        </button>
+          <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">LeetCode Solved</p>
+          <p className="text-2xl font-black text-white mt-1">{profileData.stats.leetcodeSolved}</p>
+          <p className="text-[10px] text-emerald-400 font-medium mt-0.5">Problems Completed</p>
+        </motion.div>
+
+        <motion.div 
+          whileHover={{ y: -2 }}
+          className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-4 shadow-xl text-center sm:text-left"
+        >
+          <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Coding Ninjas</p>
+          <p className="text-2xl font-black text-white mt-1">{profileData.stats.codingNinjasSolved}</p>
+          <p className="text-[10px] text-cyan-400 font-medium mt-0.5">Challenges Cleared</p>
+        </motion.div>
+
+        <motion.div 
+          whileHover={{ y: -2 }}
+          className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-4 shadow-xl text-center sm:text-left"
+        >
+          <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Resume ATS Match</p>
+          <p className="text-2xl font-black text-white mt-1">{profileData.stats.atsScore}</p>
+          <p className="text-[10px] text-indigo-400 font-medium mt-0.5">High Compatibility</p>
+        </motion.div>
+
+        <motion.div 
+          whileHover={{ y: -2 }}
+          className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-4 shadow-xl text-center sm:text-left"
+        >
+          <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Evaluation Score</p>
+          <p className="text-2xl font-black text-white mt-1">{profileData.stats.overallRating}</p>
+          <p className="text-[10px] text-amber-400 font-medium mt-0.5">Top Candidate Tier</p>
+        </motion.div>
+
       </div>
 
-      {/* Notifications */}
-      {(feedback.error || feedback.success) && (
-        <div className="text-xs font-medium">
-          {feedback.error && (
-            <div className="p-3 bg-red-950/20 border border-red-900/50 text-red-400 rounded-xl">
-              {feedback.error}
-            </div>
-          )}
-          {feedback.success && (
-            <div className="p-3 bg-emerald-950/20 border border-emerald-900/50 text-emerald-400 rounded-xl">
-              {feedback.success}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Account Highlights: Credits & Premium Badge */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-950/80 border border-cyan-500/30 text-cyan-400 flex items-center justify-center font-bold text-base">
-              ⚡
-            </div>
-            <div>
-              <p className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">Available Credits</p>
-              <p className="text-lg font-black text-white">{creditsLeft} Credits</p>
-            </div>
-          </div>
-          <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/50 border border-cyan-800/50 px-2.5 py-1 rounded-full">
-            Active
-          </span>
-        </div>
-
-        <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-950/80 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold text-base">
-              👑
-            </div>
-            <div>
-              <p className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">Subscription Tier</p>
-              <p className="text-lg font-bold text-white">{isPremium ? 'Premium Member' : 'Free Tier'}</p>
-            </div>
-          </div>
-          <span className={`text-[10px] font-mono px-2.5 py-1 rounded-full border ${
-            isPremium 
-              ? 'text-amber-400 bg-amber-950/50 border-amber-800/50' 
-              : 'text-zinc-400 bg-zinc-900 border-zinc-800'
-          }`}>
-            {isPremium ? '★ Pro' : 'Standard'}
-          </span>
-        </div>
-      </div>
-
-      <form onSubmit={handleUpdateSubmit} className="space-y-6">
+      {/* Main Content Details Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Core Demographics Card */}
-        <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-5 sm:p-6 shadow-xl">
-          <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
-            
-            {/* Avatar Uploader */}
-            <div className="relative flex flex-col items-center shrink-0">
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange} 
-                accept="image/*" 
-                className="hidden" 
-              />
-              <div 
-                onClick={() => isEditing && fileInputRef.current?.click()}
-                className={`w-24 h-24 rounded-2xl bg-zinc-900 border flex items-center justify-center text-zinc-600 text-xs overflow-hidden relative transition-all ${
-                  isEditing 
-                    ? 'border-cyan-500/50 cursor-pointer hover:border-cyan-400 group' 
-                    : 'border-zinc-800'
-                }`}
-              >
-                {avatarPreview || profileData.avatar?.url ? (
-                  <img src={avatarPreview || profileData.avatar.url} alt="User Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-zinc-500 font-medium">No Image</span>
-                )}
-                
-                {isEditing && (
-                  <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex items-center justify-center text-cyan-400 transition-opacity text-xs font-medium">
-                    Change Photo
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* General Information Inputs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
-              <div className="space-y-1 text-left">
-                <label className="text-xs text-zinc-400 font-medium">First Name</label>
-                <input type="text" name="firstName" disabled={!isEditing} value={profileData.firstName || ''} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="First Name" />
-              </div>
-              <div className="space-y-1 text-left">
-                <label className="text-xs text-zinc-400 font-medium">Last Name</label>
-                <input type="text" name="lastName" disabled={!isEditing} value={profileData.lastName || ''} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="Last Name" />
-              </div>
-              <div className="space-y-1 text-left">
-                <label className="text-xs text-zinc-400 font-medium">Username</label>
-                <input type="text" disabled value={user?.username || profileData.username || 'candidate_node'} className={getInputStyles(true)} />
-              </div>
-              <div className="space-y-1 sm:col-span-2 text-left">
-                <label className="text-xs text-zinc-400 font-medium">Primary / Secondary Email</label>
-                <input type="email" name="alternativeEmail" disabled={!isEditing} value={profileData.alternativeEmail || user?.email || ''} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="email@example.com" />
-              </div>
-              <div className="space-y-1 sm:col-span-1 text-left">
-                <label className="text-xs text-zinc-400 font-medium">Location / Address</label>
-                <input type="text" name="address" disabled={!isEditing} value={profileData.address || ''} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="City, Country" />
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Professional Experience Card */}
-        <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-5 sm:p-6 shadow-xl">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-            <div className="space-y-1">
-              <label className="text-xs text-zinc-400 font-medium">Target Job Role</label>
-              <input type="text" name="jobRole" disabled={!isEditing} value={profileData.jobRole || ''} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="e.g. Full-Stack Engineer" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-zinc-400 font-medium">Current Company</label>
-              <input type="text" name="currentCompany" disabled={!isEditing} value={profileData.currentCompany || ''} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="Company Name" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-zinc-400 font-medium">Primary Skills</label>
-              <input type="text" name="skills" disabled={!isEditing} value={profileData.skills || ''} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="React, Node.js, Python" />
-            </div>
-          </div>
-        </div>
-
-        {/* Bio & Links Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
+        {/* Left Column: Academic & Technical Stack */}
+        <div className="space-y-6">
           
-          <div className="lg:col-span-2 bg-zinc-950/60 border border-zinc-900 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
-            <div className="space-y-1">
-              <label className="text-xs text-zinc-400 font-medium">Professional Bio</label>
-              <textarea 
-                name="bio" 
-                rows="3" 
-                disabled={!isEditing} 
-                value={profileData.bio || ''} 
-                onChange={handleInputChange} 
-                className={`${getInputStyles(!isEditing)} resize-none h-24`} 
-                placeholder="Brief summary of your professional background..." 
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs text-zinc-400 font-medium">Years of Experience</label>
-                <input type="number" name="experienceYears" disabled={!isEditing} value={profileData.experienceYears || 0} onChange={handleInputChange} className={getInputStyles(!isEditing)} />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-zinc-400 font-medium">GitHub Profile</label>
-                <input type="text" name="githubUrl" disabled={!isEditing} value={profileData.githubUrl || ''} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="https://github.com/..." />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-zinc-400 font-medium">LinkedIn Profile</label>
-                <input type="text" name="linkedinUrl" disabled={!isEditing} value={profileData.linkedinUrl || ''} onChange={handleInputChange} className={getInputStyles(!isEditing)} placeholder="https://linkedin.com/in/..." />
-              </div>
+          {/* Education Details Card */}
+          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 shadow-xl space-y-4">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-3 flex items-center gap-2">
+              <span className="text-cyan-400">📜</span> Academic Background
+            </h2>
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-white">{profileData.degree}</p>
+              <p className="text-xs text-zinc-400">{profileData.institution}</p>
+              <p className="text-[11px] font-mono text-cyan-400 pt-1">Specialization: AI & Machine Learning</p>
             </div>
           </div>
 
-          {/* Platform Performance Overview Card */}
-          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between">
-            <div className="space-y-4 text-xs font-mono">
-              <h3 className="text-xs font-sans font-semibold text-zinc-300">Platform Analytics</h3>
-              <div className="flex justify-between items-center border-b border-zinc-900 pb-2">
-                <span className="text-zinc-500">ATS Match Score</span>
-                <span className="text-emerald-400 font-semibold">92%</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-zinc-900 pb-2">
-                <span className="text-zinc-500">Credits Remaining</span>
-                <span className="text-cyan-400 font-semibold">{creditsLeft}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-zinc-500">Account Tier</span>
-                <span className="text-amber-400 font-semibold">{isPremium ? 'Premium' : 'Free'}</span>
-              </div>
+          {/* Certifications Card */}
+          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 shadow-xl space-y-4">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-3 flex items-center gap-2">
+              <span className="text-indigo-400">🏅</span> Verified Credentials
+            </h2>
+            <div className="space-y-3">
+              {profileData.certifications.map((cert, idx) => (
+                <div key={idx} className="p-3 bg-zinc-900/50 border border-zinc-800/80 rounded-xl space-y-1">
+                  <p className="text-xs font-semibold text-white">{cert.title}</p>
+                  <div className="flex justify-between items-center text-[10px] text-zinc-500">
+                    <span>{cert.issuer}</span>
+                    <span className="font-mono text-zinc-400">{cert.year}</span>
+                  </div>
+                </div>
+              ))}
             </div>
+          </div>
 
-            <p className="text-[11px] text-zinc-500 pt-4 mt-4 border-t border-zinc-900">
-              Analytics update automatically as you complete practical interview sessions.
+        </div>
+
+        {/* Right Column: Bio & Full Skill Breakdown */}
+        <div className="lg:col-span-2 space-y-6">
+          
+          {/* About / Bio Section */}
+          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 shadow-xl space-y-3">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-3 flex items-center gap-2">
+              <span className="text-cyan-400">👤</span> Professional Summary
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed pt-1">
+              {profileData.bio}
             </p>
           </div>
 
+          {/* Categorized Skills Breakdown */}
+          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 shadow-xl space-y-5">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-3 flex items-center gap-2">
+              <span className="text-emerald-400">⚡</span> Technical Stack
+            </h2>
+
+            <div className="space-y-4">
+              {/* Frontend */}
+              <div>
+                <p className="text-xs font-mono text-zinc-500 mb-2">FRONTEND DEVELOPMENT</p>
+                <div className="flex flex-wrap gap-2">
+                  {profileData.skills.frontend.map((skill) => (
+                    <span key={skill} className="px-3 py-1 rounded-lg bg-cyan-950/30 border border-cyan-800/40 text-cyan-300 text-xs">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Backend */}
+              <div>
+                <p className="text-xs font-mono text-zinc-500 mb-2">BACKEND & DATABASES</p>
+                <div className="flex flex-wrap gap-2">
+                  {profileData.skills.backend.map((skill) => (
+                    <span key={skill} className="px-3 py-1 rounded-lg bg-indigo-950/30 border border-indigo-800/40 text-indigo-300 text-xs">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Languages */}
+              <div>
+                <p className="text-xs font-mono text-zinc-500 mb-2">PROGRAMMING LANGUAGES</p>
+                <div className="flex flex-wrap gap-2">
+                  {profileData.skills.languages.map((skill) => (
+                    <span key={skill} className="px-3 py-1 rounded-lg bg-emerald-950/30 border border-emerald-800/40 text-emerald-300 text-xs">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tools */}
+              <div>
+                <p className="text-xs font-mono text-zinc-500 mb-2">TOOLS & PLATFORMS</p>
+                <div className="flex flex-wrap gap-2">
+                  {profileData.skills.tools.map((skill) => (
+                    <span key={skill} className="px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
         </div>
 
-        {/* Submit Action Bar */}
-        <AnimatePresence>
-          {isEditing && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-            >
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs uppercase tracking-wider py-3.5 rounded-xl shadow-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? "Saving Changes..." : "Save Profile Changes"}
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      </div>
 
-      </form>
     </div>
   );
 }

@@ -1,112 +1,110 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-export const generateQuestionsFromAI = async (role, techStack, yearOfExperience) => {
-  try {
-    // 🚨 Standard initialization using @google/generative-ai
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({model: "gemini-3.6-flash",}); // ✅ updated (gemini-1.5-flash retired)
+const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY;
 
-    const experienceText = yearOfExperience
-      ? `${yearOfExperience} years of experience`
-      : 'Entry Level / Junior';
+if (!apiKey) {
+  console.error('CRITICAL ERROR: Gemini API key is missing in process.env');
+}
 
-    const prompt = `You are a senior technical interviewer conducting a live coding/technical session.
-Target Candidate Profile:
-- Role: ${role}
-- Tech Stack: ${Array.isArray(techStack) ? techStack.join(', ') : techStack}
-- Experience Level: ${experienceText}
+const genAI = new GoogleGenerativeAI(apiKey);
 
-Task:
-Generate exactly 10 technical interview questions tailored precisely to this candidate's experience level.
-- If Experience < 2 years: Focus on core fundamentals, syntax, and basic problem-solving.
-- If Experience 2-5 years: Focus on real-world implementation, state management, and edge cases.
-- If Experience > 5 years: Focus on high-level architecture, system design, and scalability.
-
-CRITICAL INSTRUCTION: Return ONLY a valid JSON array of strings. Do NOT include markdown blocks (\`\`\`json). Do NOT add conversational text like "Here are the questions". Just the array.
-Example:
-["Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10"]`;
-
-    // 🔥 Sending request using the stable method
-    const result = await model.generateContent(prompt);
-    let rawText = result.response.text();
-    console.log("[GEMINI RAW OUTPUT]:", rawText); // Debugging log
-
-    // Bulletproof JSON Extraction (Aapka original logic intact hai)
-    const arrayMatch = rawText.match(/\[[\s\S]*\]/);
-
-    if (arrayMatch) {
-      return JSON.parse(arrayMatch[0]);
-    } else {
-      rawText = rawText.replace(/```json|```/g, '').trim();
-      return JSON.parse(rawText);
+// Helper function: Exponential Backoff Retry on 503 high-demand errors
+const generateWithRetry = async (modelName, prompt, generationConfig, retries = 3, delay = 1000) => {
+  const model = genAI.getGenerativeModel({ model: modelName, generationConfig });
+  
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await model.generateContent(prompt);
+    } catch (error) {
+      const is503 = error.status === 503 || error.message?.includes('503');
+      if (is503 && attempt < retries) {
+        console.warn(`[Gemini 503] Server busy. Retrying in ${delay}ms... (Attempt ${attempt}/${retries})`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay *= 2;
+      } else {
+        throw error;
+      }
     }
-
-  } catch (error) {
-    console.error("❌ [GEMINI API CRASHED! REASON]:", error.message);
-
-    // User-friendly fallback array
-    return [
-      "⚠️ AI Tokens Exhausted / Server is busy.",
-      "⏳ Please wait a few minutes while we restore the connection.",
-      "In the meantime, could you tell us more about your recent projects?",
-      "We are working on bringing the AI back online...",
-      "...",
-      "...",
-      "...",
-      "...",
-      "...",
-      "..."
-    ];
   }
 };
 
-/**
- * Candidate ke Answers aur YoE ke aadhar par evaluation karega
- */
-export const evaluateInterviewFromAI = async (role, yearOfExperience, qaPairs) => {
+export const generateInterviewQuestions = async ({
+  targetRole,
+  targetCompany,
+  experienceLevel,
+  currentRole,
+  techStack
+}) => {
+  const formattedTechStack = Array.isArray(techStack) ? techStack.join(', ') : (techStack || '');
+
+  const prompt = `
+    Act as a senior technical interviewer at ${targetCompany || 'a top tech company'}.
+    Generate exactly 5 relevant interview questions for a candidate with:
+    - Target Role: ${targetRole}
+    - Experience Level: ${experienceLevel}
+    - Tech Stack: ${formattedTechStack}
+
+    Return ONLY a valid JSON array of 5 objects matching this schema:
+    [
+      {
+        "questionId": "q1",
+        "questionText": "Your generated question here",
+        "category": "Technical"
+      }
+    ]
+  `;
+
   try {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const result = await generateWithRetry('gemini-1.5-flash', prompt, { responseMimeType: 'application/json' });
+    const rawText = result.response.text().trim();
+    const cleanJson = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanJson);
+  } catch (err) {
+    console.error("Primary model failed, falling back to gemini-1.5-pro:", err.message);
+    const fallbackResult = await generateWithRetry('gemini-1.5-pro', prompt, { responseMimeType: 'application/json' });
+    const rawText = fallbackResult.response.text().trim();
+    const cleanJson = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanJson);
+  }
+};
 
-    const prompt = `You are a senior technical interviewer evaluating a candidate's responses.
-Target Profile: Role: ${role}, Experience: ${yearOfExperience || 'Entry Level'} years
+export const evaluateInterview = async ({ targetRole, experienceLevel, techStack, transcripts }) => {
+  const formattedTechStack = Array.isArray(techStack) ? techStack.join(', ') : (techStack || '');
 
-Candidate Q&A Responses:
-${JSON.stringify(qaPairs, null, 2)}
+  const prompt = `
+    You are an expert technical interviewer evaluating a candidate for:
+    - Role: ${targetRole}
+    - Level: ${experienceLevel}
+    - Tech Stack: ${formattedTechStack}
 
-Task:
-Evaluate each answer fairly based on their experience level.
-1. Calculate overall accuracy percentage (0-100%).
-2. Provide feedback for each answer.
-3. Provide an ideal/standard technical answer for each question where they scored lower.
+    Here are the interview questions and candidate's transcribed audio answers:
+    ${JSON.stringify(transcripts, null, 2)}
 
-Respond strictly in valid JSON format ONLY:
-{
-  "overallScorePercentage": 85,
-  "summary": "Overall candidate demonstrated solid practical knowledge...",
-  "evaluations": [
+    Evaluate every question and response rigorously. Return ONLY a valid JSON object matching this exact schema:
     {
-      "questionId": 1,
-      "scorePercentage": 90,
-      "feedback": "Clear answer with practical examples.",
-      "idealAnswer": "An ideal answer should cover..."
+      "overallScorePercentage": 82,
+      "summary": "Provide a comprehensive overall summary performance review here.",
+      "evaluations": [
+        {
+          "questionId": "q1",
+          "scorePercentage": 85,
+          "feedback": "Detailed evaluation feedback for this specific answer.",
+          "idealAnswer": "Key conceptual solution or ideal answer."
+        }
+      ]
     }
-  ]
-}`;
+  `;
 
-    const result = await model.generateContent(prompt);
-    let rawText = result.response.text();
-    
-    // 🔥 BULLETPROOF JSON PARSING
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    } else {
-      rawText = rawText.replace(/```json|```/g, '').trim();
-      return JSON.parse(rawText);
-    }
-  } catch (error) {
-    console.error("[GEMINI EVALUATION ERROR]:", error.message);
-    throw error;
+  try {
+    const result = await generateWithRetry('gemini-1.5-flash', prompt, { responseMimeType: 'application/json' });
+    const rawText = result.response.text().trim();
+    const cleanJson = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanJson);
+  } catch (err) {
+    console.error("Primary model evaluation failed, falling back to gemini-1.5-pro:", err.message);
+    const fallbackResult = await generateWithRetry('gemini-1.5-pro', prompt, { responseMimeType: 'application/json' });
+    const rawText = fallbackResult.response.text().trim();
+    const cleanJson = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanJson);
   }
 };

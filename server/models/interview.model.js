@@ -1,47 +1,37 @@
-import mongoose from "mongoose";
-
-const interviewSchema = new mongoose.Schema(
-  {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    profileId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Profile",
-    },
-    jobRole: {
-      type: String,
-      required: true,
-    },
-    companyTier: {
-      type: String,
-      default: "Tier 2 (High-Growth Startups)",
-    },
-    experienceYears: {
-      type: Number,
-      required: true,
-    },
-    techStack: {
-      type: [String],
-      required: true,
-    },
-    scheduledAt: {
-      type: Date,
-      default: Date.now,
-    },
-    isInstant: {
-      type: Boolean,
-      default: true,
-    },
-    status: {
-      type: String,
-      enum: ["scheduled", "in-progress", "completed", "cancelled"],
-      default: "scheduled",
-    },
+import mongoose from 'mongoose';
+const interviewSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
-  { timestamps: true }
-);
-
-export default mongoose.model("Interview", interviewSchema);
+  targetRole: { type: String, required: true },
+  targetCompany: { type: String, default: 'General Tech' },
+  experienceLevel: { type: String, required: true },
+  currentRole: { type: String, default: '' },
+  techStack: [{ type: String, required: true }],
+  status: {
+    type: String,
+    enum: ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'ARCHIVED'],
+    default: 'PENDING'
+  },
+  questions: [{
+    questionId: { type: String, required: true },
+    questionText: { type: String, required: true },
+    category: { type: String, default: 'Technical' }
+  }],
+  transcripts: [{
+    questionId: { type: String, required: true },
+    questionText: { type: String },
+    userAnswerText: { type: String }
+  }],
+  evaluation: {
+    overallScore: { type: Number, default: 0 },
+    technicalRating: { type: Number, default: 0 },
+    communicationRating: { type: Number, default: 0 },
+    feedback: { type: String, default: '' },
+    strengths: [{ type: String }],
+    improvements: [{ type: String }]
+  }
+}, { timestamps: true });
+export default mongoose.model('Interview', interviewSchema);

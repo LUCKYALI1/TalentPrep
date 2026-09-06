@@ -22,11 +22,17 @@ import { LastLocationProvider } from './context/lastLocation/lastLocationContext
 import ProtectedRoute from './components/ProtectedRoutes'
 import PublicRoute from './components/PublicRoute'
 import Dashboard from './pages/Dashboard.jsx'
-import UserDash from './components/UserDash' 
+import UserDash from './components/Overview.jsx' 
 import Profile from './components/Profile.jsx'
 import AIInterview from './pages/AIInterview.jsx'
+
+// 🎯 AI Mock Interview Pipeline Components
+import ConfigureInterview from './components/ConfigureInterview.jsx'
+import InterviewWaitingArea from './components/InterviewWaitingArea.jsx'
 import InterviewTerminal from './components/InterviewTerminal.jsx'
-import LiveTerminalRoom from './components/LiveTerminalRoom.jsx'
+import Overview from './components/Overview.jsx'
+import Account from './components/Account.jsx'
+import Setting from './components/Setting.jsx'
 
 // Master Composition Section for the Sequential Root Page
 const HomeRootScroll = () => {
@@ -77,12 +83,39 @@ function App() {
             path="/services/interview" 
             element={
               <ProtectedRoute>
-                <div className=""><AIInterview /></div>
+                <AIInterview />
               </ProtectedRoute>
             } 
           />
 
-          {/* Scheduled Info / Lock Details Screen */}
+          {/* 🤖 AI INTERVIEW STEP-BY-STEP PIPELINE */}
+          <Route 
+            path="/interview/configure" 
+            element={
+              <ProtectedRoute>
+                <ConfigureInterview />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/interview/waiting/:id" 
+            element={
+              <ProtectedRoute>
+                <InterviewWaitingArea />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/interview/terminal/:id" 
+            element={
+              <ProtectedRoute>
+                <InterviewTerminal />
+              </ProtectedRoute>
+            } 
+          />
+
           <Route 
             path="/services/interview/terminal/:id" 
             element={
@@ -101,27 +134,6 @@ function App() {
             } 
           />
 
-          {/* LIVE INTERVIEW TERMINAL ROOM ROUTE */}
-          <Route 
-            path="/services/interview/live/:id" 
-            element={
-              <ProtectedRoute>
-                <LiveTerminalRoom />
-              </ProtectedRoute>
-            } 
-          />
-
-          <Route 
-            path="/services/interview/live" 
-            element={
-              <ProtectedRoute>
-                <LiveTerminalRoom />
-              </ProtectedRoute>
-            } 
-          />
-
-          {/* 3. INDEPENDENT CONSOLE PIPELINES (PUBLIC) */}
-          <Route path="/coding-questions" element={<div className="p-8 text-white pt-24"><h1>Coding Questions Panel</h1></div>} />
           <Route path="/about" element={<div className="p-8 text-white pt-24"><h1>About Platform</h1></div>} />
 
           {/* 🔑 Public-Only Routes */}
@@ -151,9 +163,10 @@ function App() {
               </ProtectedRoute>
             } 
           >
-            <Route index element={<UserDash />} />
+            <Route index element={<Overview />} />
             <Route path="profile" element={<Profile />} />
-            <Route path="settings" element={<div className="p-8 text-white pt-24"><h1>Control & App Settings</h1></div>} />
+            <Route path="settings" element={<Setting />} />
+            <Route path="user-data-info" element={<Account/>} />
           </Route>
 
           {/* 4. ERROR TELEMETRY FALLBACK */}

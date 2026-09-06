@@ -39,7 +39,7 @@ app.get('/', (req, res) => {
 // API Routes (v1)
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/user/profile', profileRoutes);
-app.use('/api/v1/interviews', interviewRoutes);
+app.use('/api/v1/interview', interviewRoutes);
 
 
 // Payments Routes (v1)

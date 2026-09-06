@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AIInterviewForm from '../components/AIInterviewForm';
+import ConfigureInterview from '../components/ConfigureInterview';
 
 const gridBackgroundStyle = {
   backgroundImage: `
@@ -27,9 +27,9 @@ export default function AIInterview() {
 
   return (
     <div className="relative w-full min-h-screen bg-[#050507] text-white overflow-x-hidden font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
-      
+
       {/* Background Ambient FX */}
-      <div 
+      <div
         className="absolute inset-0 z-0 opacity-15 pointer-events-none fixed"
         style={gridBackgroundStyle}
       />
@@ -37,9 +37,9 @@ export default function AIInterview() {
 
       {/* ================= SECTION 1: HERO & PREVIEW ================= */}
       <section className="relative z-10 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-25 pb-16 flex flex-col items-center text-center">
-        
+
         {/* Status Pill */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
@@ -50,7 +50,7 @@ export default function AIInterview() {
         </motion.div>
 
         {/* Hero Title */}
-        <motion.h1 
+        <motion.h1
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
@@ -63,7 +63,7 @@ export default function AIInterview() {
         </motion.h1>
 
         {/* Subtitle */}
-        <motion.p 
+        <motion.p
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
@@ -73,19 +73,19 @@ export default function AIInterview() {
         </motion.p>
 
         {/* Action Buttons */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
           className="mt-8 flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center"
         >
-          <button 
+          <button
             onClick={() => setIsModalOpen(true)}
             className="w-full sm:w-auto px-8 py-3.5 bg-cyan-400 hover:bg-cyan-300 text-black font-bold text-xs sm:text-sm rounded-xl transition-all shadow-lg shadow-cyan-500/20 active:scale-95 duration-200 cursor-pointer"
           >
             Start Free AI Interview
           </button>
-          <a 
+          <a
             href="#process-section"
             className="w-full sm:w-auto px-8 py-3.5 bg-zinc-950 hover:bg-zinc-900 text-zinc-300 font-medium text-xs sm:text-sm rounded-xl border border-zinc-800 transition-all duration-200 active:scale-95 cursor-pointer inline-flex items-center justify-center"
           >
@@ -94,7 +94,7 @@ export default function AIInterview() {
         </motion.div>
 
         {/* Live Evaluation Card Preview */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 25 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
@@ -144,7 +144,7 @@ export default function AIInterview() {
 
       {/* ================= SECTION 2: WORKFLOW & DETAILED STEP CARDS ================= */}
       <section id="process-section" className="relative z-10 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-20 border-t border-zinc-900 space-y-12">
-        
+
         {/* Section Title */}
         <div className="text-center space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-800/40 bg-cyan-950/20 text-[11px] text-cyan-400 font-mono">
@@ -160,7 +160,7 @@ export default function AIInterview() {
 
         {/* 4 Detailed Process Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
+
           {/* CARD 1 */}
           <div className="bg-zinc-950/80 border border-zinc-800/80 p-6 rounded-2xl space-y-4 hover:border-zinc-700/80 transition-all">
             <div className="flex items-center justify-between">
@@ -311,7 +311,7 @@ export default function AIInterview() {
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            
+
             {/* Backdrop Blur */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -345,7 +345,7 @@ export default function AIInterview() {
               </div>
 
               {/* Form Integration */}
-              <AIInterviewForm onSubmit={handleFormSubmit} isSubmitting={isSubmitting} />
+              <ConfigureInterview onSubmit={handleFormSubmit} isSubmitting={isSubmitting} />
 
             </motion.div>
 
