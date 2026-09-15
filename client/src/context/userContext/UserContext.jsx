@@ -16,7 +16,6 @@ export const UserProvider = ({ children }) => {
   
   const [loading, setLoading] = useState(true);
 
-  // Instant state update aur localStorage synchronization helper
   const updateUser = useCallback((updatedData) => {
     setUser((prevUser) => {
       const newUserData = typeof updatedData === 'function' 
@@ -28,7 +27,6 @@ export const UserProvider = ({ children }) => {
     });
   }, []);
 
-  // Backend se fresh user data fetch karne ke liye
   const fetchUserData = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -70,3 +68,6 @@ export const useUser = () => {
   }
   return context;
 };
+
+// useAuth Alias so Profile and Dashboard components don't throw import errors
+export const useAuth = useUser;
