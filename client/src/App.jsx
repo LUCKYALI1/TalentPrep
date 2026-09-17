@@ -34,6 +34,8 @@ import Overview from './components/Overview.jsx'
 import Account from './components/Account.jsx'
 import Setting from './components/Setting.jsx'
 import Navbar from './components/Navbar.jsx'
+import About from './pages/About.jsx'
+import Ats from './pages/Ats.jsx'
 
 // 🧭 Auto Scroll-To-Top on Route Navigation
 function ScrollToTop() {
@@ -53,7 +55,6 @@ const HomeRootScroll = () => {
       <LandingPage />
       <WhyChoose />
       <Practice />
-      <FAQs />
       <Footer />
     </div>
   )
@@ -70,15 +71,15 @@ function App() {
         <Navbar />
 
         {/* 3. Global Container with pt-20 (80px padding) to clear fixed navbar */}
-        <main className="w-full min-h-screen pt-20 bg-black text-white flex flex-col">
+        <main className="w-full min-h-screen  bg-black text-white flex flex-col">
           <Routes>
             {/* Landing / Public pages */}
             <Route path="/" element={<HomeRootScroll />} />
-            <Route path="/about" element={<div className="p-8 max-w-5xl mx-auto"><h1>About Platform</h1></div>} />
+            <Route path="/about" element={<div className="p-8 max-w-5xl mx-auto"><><About /></></div>} />
 
             {/* Pricing & Services */}
             <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
-            <Route path="/services/ats" element={<ProtectedRoute><div className="p-8 text-white"><h1>ATS Scoring Engine</h1></div></ProtectedRoute>} />
+            <Route path="/services/ats" element={<ProtectedRoute><Ats /></ProtectedRoute>} />
             <Route path="/services/interview" element={<ProtectedRoute><AIInterview /></ProtectedRoute>} />
 
             {/* Dedicated Interview Report */}

@@ -1,9 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { 
+  Terminal, 
+  Cpu, 
+  AlertCircle, 
+  X, 
+  CheckCircle2, 
+  ArrowRight, 
+  SlidersHorizontal, 
+  Activity,
+  ShieldCheck
+} from 'lucide-react';
 import api from '../utils/api'; 
 import ActiveSessionModal from './ActiveSessionModal';
 
-export default function ConfigureInterview() {
+const EXPERIENCE_TIERS = [
+  'Fresher / Student (0 Yrs)',
+  'Junior Engineer (1 - 2 Yrs)',
+  'Mid-Level Engineer (3 - 5 Yrs)',
+  'Senior / Staff (5+ Yrs)'
+];
+
+export default function ConfigureInterview({ onSubmit, isSubmitting }) {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     targetRole: '',
@@ -16,7 +34,9 @@ export default function ConfigureInterview() {
   const [activeSession, setActiveSession] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(''); // Error message state
+  const [error, setError] = useState('');
+
+  const isExecuting = isSubmitting || loading;
 
   useEffect(() => {
     checkActiveSession();
@@ -32,18 +52,24 @@ export default function ConfigureInterview() {
       }
     } catch (err) {
       console.error('Failed to check active interview:', err);
-      setError(err.response?.data?.message || 'Failed to check existing session status.');
     }
   };
 
   const handleChange = (e) => {
-    setError(''); // User input par error reset karein
+    setError('');
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleStartNewSession = async () => {
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+
     if (!formData.targetRole.trim() || !formData.techStack.trim()) {
-      setError('Please fill in all required fields.');
+      setError('Target role and primary tech stack are required.');
+      return;
+    }
+
+    if (onSubmit) {
+      onSubmit(formData);
       return;
     }
 
@@ -55,14 +81,12 @@ export default function ConfigureInterview() {
       setShowModal(false);
       navigate(`/interview/waiting/${res.data.interviewId}`, { state: res.data });
     } catch (err) {
-      console.error('Error creating session:', err);
       const serverMsg = err.response?.data?.message;
-      if (err.response?.status === 503) {
-        setError('AI Service is currently at peak capacity. Please wait a few seconds and try again.');
-      } else {
-        setError(serverMsg || 'Failed to create interview session. Please try again.');
-      }
-    }  finally {
+      setError(err.response?.status === 503 
+        ? 'Inference cluster is at peak capacity. Retrying shortly...' 
+        : serverMsg || 'Failed to instantiate interview session.'
+      );
+    } finally {
       setLoading(false);
     }
   };
@@ -80,125 +104,254 @@ export default function ConfigureInterview() {
     try {
       await api.post('/interview/archive-active');
       setShowModal(false);
-      await handleStartNewSession();
+      await handleFormSubmit({ preventDefault: () => {} });
     } catch (err) {
-      console.error('Failed to archive session:', err);
-      setError(err.response?.data?.message || 'Failed to queue previous session.');
+      setError(err.response?.data?.message || 'Failed to archive active session.');
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#050507] text-zinc-100 flex items-center justify-center p-4 sm:p-6 relative selection:bg-cyan-500/30 selection:text-cyan-200 overflow-hidden">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[140px] pointer-events-none" />
-
-      <div className="max-w-xl w-full bg-[#09090b] border border-zinc-800/90 rounded-2xl p-6 sm:p-8 shadow-2xl relative z-10">
-        <div className="mb-6">
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
-            Configure AI Mock Session
-          </h2>
-          <p className="text-xs sm:text-sm text-zinc-400 mt-1">Fill details to personalize your evaluation</p>
+    <div className="w-[80%] m-auto bg-[#09090b] border border-zinc-800 rounded-xl shadow-2xl overflow-hidden flex flex-col font-sans select-none text-zinc-100">
+      
+      {/* Terminal Titlebar */}
+      <div className="flex items-center justify-between px-5 py-3 bg-zinc-950 border-b border-zinc-800 text-xs font-mono">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-zinc-800 border border-zinc-700" />
+            <span className="w-2.5 h-2.5 rounded-full bg-zinc-800 border border-zinc-700" />
+            <span className="w-2.5 h-2.5 rounded-full bg-zinc-800 border border-zinc-700" />
+          </div>
+          <span className="text-zinc-400 font-medium flex items-center gap-2 pl-3 border-l border-zinc-800">
+            <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+            SESSION_CALIBRATOR // LANDSCAPE_CONSOLE
+          </span>
         </div>
 
-        {/* ERROR BANNER */}
-        {error && (
-          <div className="mb-5 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl text-xs sm:text-sm flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 text-[11px]">
+          <span className="flex items-center gap-1.5 text-emerald-400 bg-emerald-950/40 border border-emerald-900/50 px-2.5 py-0.5 rounded-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            ENGINE_ONLINE
+          </span>
+          <span className="text-zinc-500 hidden sm:inline">GEMINI-1.5-FLASH</span>
+        </div>
+      </div>
+
+      {/* Error Strip */}
+      {error && (
+        <div className="bg-red-950/40 border-b border-red-900/50 px-5 py-2.5 text-xs text-red-400 flex items-center justify-between font-mono">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
-            <button 
-              onClick={() => setError('')} 
-              className="text-red-400 hover:text-red-200 font-bold text-xs"
+          </div>
+          <button onClick={() => setError('')} className="hover:text-red-200 transition cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* 2-Column Balanced Cockpit Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-zinc-800">
+        
+        {/* Left Side: Parameters Form (7 Columns) */}
+        <form onSubmit={handleFormSubmit} className="lg:col-span-7 p-6 sm:p-7 flex flex-col justify-between space-y-5">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-cyan-400" />
+                Runtime Parameters
+              </h2>
+              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded">
+                CALIBRATION
+              </span>
+            </div>
+            <p className="text-xs text-zinc-400 font-mono">
+              Specify your target domain to generate accurate algorithmic and behavioral tracks.
+            </p>
+          </div>
+
+          {/* Form Fields 2-Col Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs font-mono">
+            
+            <div className="space-y-1.5">
+              <label className="text-[10px] uppercase text-zinc-400 flex items-center justify-between">
+                <span>01 // Target Role</span>
+                <span className="text-cyan-400 font-bold">* REQUIRED</span>
+              </label>
+              <input
+                type="text"
+                name="targetRole"
+                required
+                disabled={isExecuting}
+                value={formData.targetRole}
+                onChange={handleChange}
+                placeholder="e.g. Full-Stack Engineer, SDE-1"
+                className="w-full bg-zinc-950 border border-zinc-800 focus:border-cyan-500 rounded-lg px-3 py-2 text-zinc-200 placeholder-zinc-700 outline-none transition disabled:opacity-50"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] uppercase text-zinc-400">
+                02 // Company / Rubric
+              </label>
+              <input
+                type="text"
+                name="targetCompany"
+                disabled={isExecuting}
+                value={formData.targetCompany}
+                onChange={handleChange}
+                placeholder="e.g. Google, Razorpay, or FAANG"
+                className="w-full bg-zinc-950 border border-zinc-800 focus:border-cyan-500 rounded-lg px-3 py-2 text-zinc-200 placeholder-zinc-700 outline-none transition disabled:opacity-50"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] uppercase text-zinc-400">
+                03 // Seniority Level
+              </label>
+              <select
+                name="experienceLevel"
+                disabled={isExecuting}
+                value={formData.experienceLevel}
+                onChange={handleChange}
+                className="w-full bg-zinc-950 border border-zinc-800 focus:border-cyan-500 rounded-lg px-3 py-2 text-zinc-200 outline-none transition disabled:opacity-50 cursor-pointer"
+              >
+                {EXPERIENCE_TIERS.map((tier) => (
+                  <option key={tier} value={tier} className="bg-zinc-900 text-zinc-200">
+                    {tier}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] uppercase text-zinc-400">
+                04 // Current Background
+              </label>
+              <input
+                type="text"
+                name="currentRole"
+                disabled={isExecuting}
+                value={formData.currentRole}
+                onChange={handleChange}
+                placeholder="e.g. CS Student, React Intern"
+                className="w-full bg-zinc-950 border border-zinc-800 focus:border-cyan-500 rounded-lg px-3 py-2 text-zinc-200 placeholder-zinc-700 outline-none transition disabled:opacity-50"
+              />
+            </div>
+
+            <div className="sm:col-span-2 space-y-1.5">
+              <label className="text-[10px] uppercase text-zinc-400 flex items-center justify-between">
+                <span>05 // Primary Tech Stack</span>
+                <span className="text-cyan-400 font-bold">* REQUIRED</span>
+              </label>
+              <input
+                type="text"
+                name="techStack"
+                required
+                disabled={isExecuting}
+                value={formData.techStack}
+                onChange={handleChange}
+                placeholder="e.g. React, TypeScript, Node.js, PostgreSQL, Redis"
+                className="w-full bg-zinc-950 border border-zinc-800 focus:border-cyan-500 rounded-lg px-3.5 py-2.5 text-zinc-200 placeholder-zinc-700 outline-none transition disabled:opacity-50"
+              />
+            </div>
+
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={isExecuting}
+              className="w-full bg-cyan-400 hover:bg-cyan-300 disabled:opacity-50 text-black font-semibold text-xs sm:text-sm py-3 px-4 rounded-xl transition shadow-[0_0_20px_rgba(34,211,238,0.2)] flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
             >
-              ✕
+              {isExecuting ? (
+                <span className="flex items-center gap-2 font-mono">
+                  <span className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                  INITIALIZING_PIPELINE...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2 font-mono tracking-wide">
+                  INITIALIZE INTERVIEW PIPELINE <ArrowRight className="w-4 h-4" />
+                </span>
+              )}
             </button>
           </div>
-        )}
-
-        <form onSubmit={(e) => { e.preventDefault(); handleStartNewSession(); }} className="space-y-4">
-          <div>
-            <label className="block text-[11px] font-mono uppercase tracking-wider text-zinc-400 mb-1.5">Target Role *</label>
-            <input
-              type="text"
-              name="targetRole"
-              required
-              disabled={loading}
-              value={formData.targetRole}
-              onChange={handleChange}
-              placeholder="e.g. Frontend Developer, SDE-1"
-              className="w-full bg-zinc-950/80 border border-zinc-800/90 rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 focus:ring-1 focus:ring-cyan-500/50 transition disabled:opacity-50"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-mono uppercase tracking-wider text-zinc-400 mb-1.5">Target Company</label>
-            <input
-              type="text"
-              name="targetCompany"
-              disabled={loading}
-              value={formData.targetCompany}
-              onChange={handleChange}
-              placeholder="e.g. Google, Velocity, TCS (Optional)"
-              className="w-full bg-zinc-950/80 border border-zinc-800/90 rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 focus:ring-1 focus:ring-cyan-500/50 transition disabled:opacity-50"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-mono uppercase tracking-wider text-zinc-400 mb-1.5">Experience Level *</label>
-            <select
-              name="experienceLevel"
-              disabled={loading}
-              value={formData.experienceLevel}
-              onChange={handleChange}
-              className="w-full bg-zinc-950/80 border border-zinc-800/90 rounded-xl px-4 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-cyan-500/80 focus:ring-1 focus:ring-cyan-500/50 transition disabled:opacity-50"
-            >
-              <option className="bg-zinc-900 text-zinc-200">Fresher / Student (0 Yrs)</option>
-              <option className="bg-zinc-900 text-zinc-200">Junior (1 - 2 Yrs)</option>
-              <option className="bg-zinc-900 text-zinc-200">Mid-Level (3 - 5 Yrs)</option>
-              <option className="bg-zinc-900 text-zinc-200">Senior (5+ Yrs)</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-mono uppercase tracking-wider text-zinc-400 mb-1.5">Previous / Current Role</label>
-            <input
-              type="text"
-              name="currentRole"
-              disabled={loading}
-              value={formData.currentRole}
-              onChange={handleChange}
-              placeholder="e.g. CS Student, React Intern"
-              className="w-full bg-zinc-950/80 border border-zinc-800/90 rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 focus:ring-1 focus:ring-cyan-500/50 transition disabled:opacity-50"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-mono uppercase tracking-wider text-zinc-400 mb-1.5">Tech Stack / Primary Skills *</label>
-            <input
-              type="text"
-              name="techStack"
-              required
-              disabled={loading}
-              value={formData.techStack}
-              onChange={handleChange}
-              placeholder="e.g. React, Node.js, Express, MongoDB"
-              className="w-full bg-zinc-950/80 border border-zinc-800/90 rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/80 focus:ring-1 focus:ring-cyan-500/50 transition disabled:opacity-50"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-6 bg-cyan-400 hover:bg-cyan-300 disabled:opacity-50 text-zinc-950 font-bold py-3 rounded-xl transition-all shadow-lg shadow-cyan-500/20 active:scale-[0.99] flex justify-center items-center text-sm"
-          >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
-                Generating Session...
-              </span>
-            ) : (
-              'Proceed to Waiting Room'
-            )}
-          </button>
         </form>
+
+        {/* Right Side: Live Spec Inspector (5 Columns) */}
+        <div className="lg:col-span-5 p-6 sm:p-7 bg-zinc-950/50 flex flex-col justify-between space-y-5">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
+              <span className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+                <Cpu className="w-3.5 h-3.5 text-cyan-400" /> Telemetry HUD
+              </span>
+              <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/40 border border-cyan-900/50 px-2 py-0.5 rounded">
+                LIVE_SPEC
+              </span>
+            </div>
+
+            {/* Spec Card */}
+            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3.5 space-y-2.5 font-mono text-xs">
+              <div>
+                <span className="text-[9px] text-zinc-500 uppercase tracking-wider block">Target Role</span>
+                <p className="text-white font-semibold truncate text-xs mt-0.5">
+                  {formData.targetRole || <span className="text-zinc-600">Awaiting input...</span>}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-900">
+                <div>
+                  <span className="text-[9px] text-zinc-500 uppercase tracking-wider block">Seniority</span>
+                  <p className="text-cyan-400 text-[11px] truncate mt-0.5">{formData.experienceLevel}</p>
+                </div>
+                <div>
+                  <span className="text-[9px] text-zinc-500 uppercase tracking-wider block">Benchmark</span>
+                  <p className="text-zinc-300 text-[11px] truncate mt-0.5">{formData.targetCompany || 'Standard Tech'}</p>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-zinc-900">
+                <span className="text-[9px] text-zinc-500 uppercase tracking-wider block mb-1">Parsed Tech Stack</span>
+                <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto">
+                  {formData.techStack ? (
+                    formData.techStack.split(',').map((skill, idx) => (
+                      <span key={idx} className="px-1.5 py-0.5 bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-300 rounded font-mono">
+                        {skill.trim()}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-zinc-600 text-[10px]">No skills declared</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Guarantees */}
+            <div className="space-y-2 text-xs font-mono">
+              <div className="flex items-center gap-2 text-zinc-400">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>Speech-to-text live stream capture</span>
+              </div>
+              <div className="flex items-center gap-2 text-zinc-400">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>STAR framework answer evaluation</span>
+              </div>
+              <div className="flex items-center gap-2 text-zinc-400">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>Dynamic fallback on model rate limits</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950 text-xs font-mono text-zinc-500 flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-cyan-400">
+              <Activity className="w-3 h-3 animate-pulse" />
+              STREAM_READY
+            </span>
+            <span>~15 MIN RUNTIME</span>
+          </div>
+        </div>
+
       </div>
 
       <ActiveSessionModal

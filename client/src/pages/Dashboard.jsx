@@ -52,7 +52,7 @@ function Dashboard() {
   };
 
   return (
-    <section className="relative w-full min-h-screen bg-black text-white flex items-start justify-center pt-24 sm:pt-2 pb-10 px-3 sm:px-6 lg:px-8 font-sans overflow-hidden select-none">
+    <section className="relative w-full min-h-screen bg-black text-white flex items-start justify-center pt-24 sm:pt-2 lg:pt-20 pb-10 px-3 sm:px-6 lg:px-8 font-sans overflow-hidden select-none">
       
       {/* Background Matrix Ambient Light */}
       <div 

@@ -2,61 +2,47 @@ import mongoose from "mongoose";
 
 const ProfileSchema = new mongoose.Schema(
   {
-    // Core relation link
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
       unique: true,
     },
-
-    // Demographics & Professional Info
     firstName: { type: String, default: "" },
     lastName: { type: String, default: "" },
+    title: { type: String, default: "Full-Stack Engineer" },
+    bio: { type: String, default: "" },
+    location: { type: String, default: "" },
+
+    // Academic Details
+    degree: { type: String, default: "" },
+    institution: { type: String, default: "" },
+    graduationYear: { type: String, default: "" },
+
+    // Technical Skills
+    skills: { type: [String], default: [] },
+
+    // Cloudinary Managed Image
     avatar: {
-      url: { type: String, default: "" },
+      url: { 
+        type: String, 
+        default: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400" 
+      },
       public_id: { type: String, default: "" },
     },
-    address: { type: String, default: "" },
-    alternativeEmail: { type: String, default: "" },
-    skills: { type: [String], default: [] },
-    jobRole: { type: String, default: "" },
-    currentCompany: { type: String, default: "" },
-    bio: { type: String, default: "" },
-    experienceYears: { type: Number, default: 0 },
-    githubUrl: { type: String, default: "" },
-    linkedinUrl: { type: String, default: "" },
 
-    /* 🛡️ ECOSYSTEM REFERENCES (One-to-Many Arrays) */
+    // Social & Professional Links
+    links: {
+      github: { type: String, default: "" },
+      linkedin: { type: String, default: "" },
+      portfolio: { type: String, default: "" },
+    },
 
-    // List of Interview IDs linked to this profile
+    // Relational Arrays
     interviews: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Interview",
-      },
-    ],
-
-    // Notifications linked to this user/profile
-    notifications: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Notification",
-      },
-    ],
-
-    // Future ATS Evaluations
-    atsScoring: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "AtsScoring",
-      },
-    ],
-
-    aiAssessments: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "AiAssessment",
       },
     ],
   },

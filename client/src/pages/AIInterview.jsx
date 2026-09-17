@@ -345,7 +345,7 @@ export default function AIInterview() {
               </div>
 
               {/* Form Integration */}
-              <ConfigureInterview onSubmit={handleFormSubmit} isSubmitting={isSubmitting} />
+              <ConfigureInterview onSubmit={handleFormSubmit} isSubmitting={isSubmitting} className='w-full' />
 
             </motion.div>
 

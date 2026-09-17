@@ -1,5 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
+import {Link} from 'react-router-dom'
 
 const gridBackgroundStyle = {
   backgroundImage: `
@@ -57,19 +59,26 @@ function LandingPage() {
           Practice role-specific mock interviews. Receive real-time scoring, target your exact response mistakes, and master STAR-formatted answers.
         </motion.p>
 
-        {/* CTA Actions */}
+       {/* CTA Button Group */}
         <motion.div 
-          initial={{ opacity: 0, y: 15 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="mt-8 flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center"
+          transition={{ duration: 0.45, delay: 0.24 }}
+          className="mt-8 flex flex-col sm:flex-row items-center gap-3.5 w-full sm:w-auto"
         >
-          <button className="w-full sm:w-auto px-8 py-3.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm rounded-xl transition-all shadow-lg shadow-cyan-500/25 active:scale-95 duration-200">
-            Start Free AI Interview
-          </button>
-          <button className="w-full sm:w-auto px-8 py-3.5 bg-zinc-950 hover:bg-zinc-900 text-zinc-300 font-medium text-sm rounded-xl border border-zinc-800 transition-all duration-200 active:scale-95">
-            View Sample Evaluation
-          </button>
+          <Link
+            to="/interview/configure"
+            className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-semibold text-xs sm:text-sm transition-all shadow-[0_0_24px_rgba(34,211,238,0.25)] hover:shadow-[0_0_32px_rgba(34,211,238,0.4)] flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+          >
+             Start AI Interview
+          </Link>
+
+          <Link
+            to="/pricing"
+            className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 text-xs sm:text-sm font-medium transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            Tier Plans & Credits <ArrowRight className="w-3.5 h-3.5 text-zinc-500" />
+          </Link>
         </motion.div>
 
         {/* Centered Evaluation Card Preview */}
