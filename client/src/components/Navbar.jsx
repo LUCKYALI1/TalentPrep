@@ -43,10 +43,21 @@ function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, loading, user: authUser } = useAuth(); 
-  const { user: customUser } = useUser();
+  
+  let customUser = null;
+  let setCustomUser = null;
+  try {
+    const userCtx = useUser();
+    customUser = userCtx?.user;
+    setCustomUser = userCtx?.setUser;
+  } catch (err) {
+    // Graceful fallback if UserContext is not present
+  }
 
-  // User state fallback to ensure sync between useUser & useAuth
-  const user = customUser || authUser;
+  // 🛡️ Strict Auth Check: Token aur active auth session hone par hi user valid hoga
+  const token = localStorage.getItem('token');
+  const isAuthenticated = Boolean(token && authUser);
+  const user = isAuthenticated ? (customUser || authUser) : null;
 
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -82,23 +93,36 @@ function Navbar() {
   }, [location.pathname]);
 
   const handleLogout = async () => {
-    await logout();
-    setIsOpen(false);
-    setShowDropdown(false);
-    navigate('/login');
+    try {
+      await logout();
+      if (setCustomUser) setCustomUser(null);
+    } catch (err) {
+      console.error("Logout error:", err);
+    } finally {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      setIsOpen(false);
+      setShowDropdown(false);
+      navigate('/login');
+    }
   };
+
+  const displayName = user?.firstName
+    ? `${user.firstName}${user?.lastName ? ` ${user.lastName}` : ''}`
+    : (user?.username || user?.email?.split('@')[0] || 'Developer');
 
   const userInitial = user?.firstName?.[0]?.toUpperCase() || 
                       user?.username?.[0]?.toUpperCase() || 
                       user?.email?.[0]?.toUpperCase() || 
                       'U';
 
+  const avatarSrc = user?.avatar?.url || user?.avatar || '';
   const userCredits = user?.credits ?? 0;
 
   return (
     <>
       <nav 
-        className="fixed top-4 left-1/2 -translate-x-1/2 w-[92%] max-w-7xl bg-black/80 backdrop-blur-xl rounded-2xl px-5 py-3.5 md:px-8 z-50 border border-zinc-800/90 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]"
+        className="fixed top-4 left-1/2 -translate-x-1/2 w-[92%] max-w-7xl bg-black/80 backdrop-blur-xl rounded-2xl px-5 py-3 md:px-8 z-50 border border-zinc-800/90 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]"
         aria-label="Main Navigation"
       >
         <div className="flex items-center justify-between">
@@ -109,7 +133,7 @@ function Navbar() {
             <span>Talent<span className="text-cyan-400">Prep</span></span>
           </Link>
           
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center"> 
             <ul className="flex items-center gap-8"> 
               {navItems.map((item, idx) => {
@@ -131,7 +155,7 @@ function Navbar() {
                         onClick={() => setShowDropdown((prev) => !prev)}
                         aria-expanded={showDropdown}
                         aria-haspopup="true"
-                        className="flex items-center gap-1.5 focus:outline-none"
+                        className="flex items-center gap-1.5 focus:outline-none cursor-pointer"
                       >
                         <motion.div 
                           variants={linkVariants} 
@@ -209,16 +233,16 @@ function Navbar() {
           </div>
 
           {/* User Auth Section (Desktop) */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-3">
             {loading ? (
               <span className="w-4 h-4 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
             ) : user ? (
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 {userCredits > 0 ? (
                   <Link 
                     to="/pricing"
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/40 border border-cyan-500/30 text-cyan-400 text-xs font-semibold shadow-[0_0_12px_rgba(6,182,212,0.15)] hover:border-cyan-400 transition-all select-none"
-                    title="Click to top-up AI credits"
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/40 border border-cyan-500/30 text-cyan-400 text-xs font-semibold hover:border-cyan-400 transition-all select-none"
+                    title="Click to view plans"
                   >
                     <span className="animate-pulse">⚡</span>
                     <span>{userCredits} <span className="text-[10px] opacity-80">Credits</span></span>
@@ -226,25 +250,38 @@ function Navbar() {
                 ) : (
                   <Link 
                     to="/pricing"
-                    className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-gradient-to-r from-red-500/20 via-pink-500/20 to-cyan-500/20 border border-cyan-400 text-cyan-300 hover:text-white text-xs font-bold transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:scale-105 active:scale-95 animate-pulse"
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-red-500/20 via-pink-500/20 to-cyan-500/20 border border-cyan-400 text-cyan-300 hover:text-white text-xs font-bold transition-all animate-pulse"
                   >
                     <span>⚡</span>
                     <span>Buy Credits</span>
                   </Link>
                 )}
 
+                {/* Identity Pill */}
                 <Link 
                   to="/dashboard" 
-                  className="text-zinc-300 hover:text-cyan-400 flex items-center gap-2 transition-colors text-sm font-medium group"
+                  className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-zinc-900/80 border border-zinc-800/90 hover:border-zinc-700 hover:bg-zinc-800/80 text-zinc-200 hover:text-white transition-all group"
+                  title="Open Dashboard"
                 >
-                  <span className="h-6 w-6 rounded-full bg-zinc-900 border border-zinc-700 text-[11px] font-mono flex items-center justify-center text-cyan-400 group-hover:border-cyan-500 transition-colors">
-                    {userInitial}
+                  {avatarSrc ? (
+                    <img 
+                      src={avatarSrc} 
+                      alt={displayName} 
+                      className="h-6 w-6 rounded-lg object-cover border border-cyan-500/40"
+                    />
+                  ) : (
+                    <span className="h-6 w-6 rounded-lg bg-zinc-800 border border-zinc-700 text-[11px] font-mono flex items-center justify-center text-cyan-400 group-hover:border-cyan-500 transition-colors">
+                      {userInitial}
+                    </span>
+                  )}
+                  <span className="text-xs font-semibold tracking-tight max-w-[130px] truncate">
+                    {displayName}
                   </span>
-                  {user.firstName || user.username || 'Dashboard'}
                 </Link>
+
                 <button 
                   onClick={handleLogout}
-                  className="text-zinc-400 hover:text-red-400 transition-colors text-xs font-medium cursor-pointer"
+                  className="text-zinc-400 hover:text-red-400 transition-colors text-xs font-medium cursor-pointer px-1.5 py-1"
                 >
                   Logout
                 </button>
@@ -271,7 +308,7 @@ function Navbar() {
           <div className="md:hidden flex items-center">
             <button 
               onClick={() => setIsOpen(!isOpen)} 
-              className="p-2 text-zinc-400 hover:text-white focus:outline-none"
+              className="p-2 text-zinc-400 hover:text-white focus:outline-none cursor-pointer"
               aria-label="Toggle Navigation Menu"
               aria-expanded={isOpen}
             >
@@ -297,6 +334,31 @@ function Navbar() {
             transition={{ duration: 0.2, ease: "easeOut" }}
             className="fixed top-20 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-[#09090b]/95 backdrop-blur-2xl rounded-2xl p-5 shadow-2xl z-40 border border-zinc-800 flex flex-col gap-4 md:hidden"
           >
+            {/* Mobile User Identity (Only renders if authenticated) */}
+            {user && (
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 text-left">
+                {avatarSrc ? (
+                  <img 
+                    src={avatarSrc} 
+                    alt={displayName} 
+                    className="h-9 w-9 rounded-xl object-cover border border-cyan-500/40 shrink-0" 
+                  />
+                ) : (
+                  <span className="h-9 w-9 rounded-xl bg-zinc-800 border border-zinc-700 text-xs font-mono flex items-center justify-center text-cyan-400 shrink-0">
+                    {userInitial}
+                  </span>
+                )}
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-xs font-bold text-white truncate leading-tight">
+                    {displayName}
+                  </span>
+                  <span className="text-[10px] font-mono text-zinc-400 truncate">
+                    {user?.email || `@${user?.username || 'user'}`}
+                  </span>
+                </div>
+              </div>
+            )}
+
             <ul className="flex flex-col gap-1">
               {navItems.map((item, idx) => {
                 if (item.dropdown) {
@@ -314,7 +376,7 @@ function Navbar() {
                       
                       <AnimatePresence>
                         {mobileDropdownOpen && (
-                          <motion.div
+                          <motion.div 
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: "auto", opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
@@ -353,13 +415,13 @@ function Navbar() {
 
             <div className="h-[1px] bg-zinc-900 w-full" />
 
-            {/* Mobile Auth Options */}
+            {/* Mobile Auth Bottom Section */}
             <div>
               {user ? (
                 <div className="flex flex-col gap-2">
                   {userCredits > 0 ? (
                     <Link 
-                      to="/pricing"
+                      to="/pricing" 
                       onClick={() => setIsOpen(false)}
                       className="flex items-center justify-between py-2 px-3 bg-cyan-950/30 border border-cyan-500/20 rounded-xl text-xs font-medium text-cyan-400 mb-1 select-none hover:border-cyan-400 transition-colors"
                     >
@@ -370,7 +432,7 @@ function Navbar() {
                     </Link>
                   ) : (
                     <Link 
-                      to="/pricing"
+                      to="/pricing" 
                       onClick={() => setIsOpen(false)}
                       className="flex items-center justify-between py-2 px-3 bg-gradient-to-r from-red-500/20 via-pink-500/20 to-cyan-500/20 border border-cyan-400 rounded-xl text-xs font-bold text-cyan-300 mb-1 select-none animate-pulse"
                     >
@@ -384,16 +446,13 @@ function Navbar() {
                   <Link 
                     to="/dashboard" 
                     onClick={() => setIsOpen(false)}
-                    className="text-zinc-300 hover:text-cyan-400 flex items-center gap-3 py-2.5 px-3 text-sm font-medium transition-colors rounded-xl hover:bg-zinc-900/60"
+                    className="text-zinc-300 hover:text-cyan-400 flex items-center justify-center py-2.5 px-3 text-sm font-medium transition-colors rounded-xl bg-zinc-900/80 border border-zinc-800"
                   >
-                    <span className="h-6 w-6 rounded-full bg-zinc-900 border border-zinc-700 text-[10px] font-mono flex items-center justify-center text-cyan-400">
-                      {userInitial}
-                    </span>
-                    Dashboard
+                    Open Dashboard
                   </Link>
                   <button 
                     onClick={handleLogout}
-                    className="text-left text-red-400 hover:text-red-300 py-2.5 px-3 text-sm font-medium transition-colors rounded-xl hover:bg-zinc-900/60 w-full"
+                    className="text-center text-red-400 hover:text-red-300 py-2.5 px-3 text-sm font-medium transition-colors rounded-xl hover:bg-zinc-900/60 w-full cursor-pointer"
                   >
                     Logout
                   </button>
