@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import Interview from '../models/interview.model.js';
-import User from '../models/user.model.js'; // ⚡ Required for credit tracking
+import User from '../models/userModel.js'; 
 import { generateInterviewQuestions, evaluateInterview } from '../services/gemini.service.js';
 
 // Safe User ID Extractor & Query Builder (Prevents ObjectId vs String mismatches)
