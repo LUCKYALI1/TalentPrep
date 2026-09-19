@@ -1,12 +1,13 @@
+// server/index.js
 import express from "express";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import dns from "dns"; // ⚡ Fix 1: Added missing dns import
+import dns from "dns";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
-// Route & Middleware Imports (All imports grouped at the top)
+// Route & Middleware Imports
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import profileRoutes from "./routes/profile.router.js";
@@ -23,8 +24,12 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 dotenv.config({ path: path.resolve(__dirname, ".env") });
 
-// Fix DNS resolution for MongoDB Atlas in serverless environments
-dns.setServers(["8.8.8.8", "1.1.1.1"]);
+// Safe DNS configuration for MongoDB Atlas
+try {
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+} catch (e) {
+  console.warn("DNS custom servers skipped:", e.message);
+}
 
 // Database Connection
 connectDB();
@@ -38,6 +43,7 @@ const allowedOrigins = [
   "http://localhost:3000"
 ];
 
+// CORS Middleware (Express 5 compatible - automatically answers OPTIONS preflights)
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -49,25 +55,29 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: [
+      "Content-Type", 
+      "Authorization", 
+      "X-Requested-With", 
+      "Accept"
+    ],
     optionsSuccessStatus: 200
   })
 );
 
-// Preflight OPTIONS requests handler
-app.options("*", cors());
+// ⚡ NOTICE: Removed `app.options('*', cors())` which crashes Express 5's path-to-regexp parser
 
 // Body & Cookie Parsers
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-// Root Health-Check Route (Prevents 404/500 when opening the backend URL directly)
+// Root Health-Check Route
 app.get("/", (req, res) => {
   res.status(200).json({
     status: "active",
     service: "TalentPrep Backend API",
-    uptime: process.uptime()
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -99,5 +109,5 @@ if (process.env.NODE_ENV !== "production") {
   });
 }
 
-// ⚡ Fix 2: Required by Vercel to invoke your serverless Express app
+// Vercel Serverless Export
 export default app;
