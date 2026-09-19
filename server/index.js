@@ -29,10 +29,29 @@ connectDB();
 
 const app = express();
 
+const allowedOrigins = [
+  'https://talentprep.netlify.app',
+  'http://localhost:5173',
+  'http://localhost:3000'
+];
+
 app.use(cors({
-  origin: process.env.CLIENT_URL,
-  credentials: true
+  origin: function (origin, callback) {
+    // Bina origin wali requests (e.g. mobile apps, postman) ya allowed list match hone par allow karein
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Blocked by CORS policy'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200
 }));
+
+// Preflight OPTIONS requests handle karne ke liye
+app.options('*', cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
