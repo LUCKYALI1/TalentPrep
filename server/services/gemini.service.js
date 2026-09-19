@@ -1,141 +1,104 @@
+// server/services/gemini.service.js
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Ye current folder aur server folder dono ke .env ko dhoondh lega
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
-dotenv.config({ path: path.resolve(__dirname, '.env') });
-
-// Dynamic API Key Sanitizer (Trims spaces and strips accidental surrounding quotes)
-const getSanitizedApiKey = () => {
-  const rawKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY || '';
-  return rawKey.trim().replace(/^["']|["']$/g, '');
-};
-
-const getGenAIClient = () => {
-  const apiKey = getSanitizedApiKey();
-  if (!apiKey) {
-    console.error('❌ [Gemini Auth Error]: No valid Gemini API key found in environment variables.');
+// API Key Reader
+const getGeminiClient = () => {
+  const rawKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || '';
+  const cleanKey = rawKey.trim().replace(/^["']|["']$/g, '');
+  if (!cleanKey) {
+    console.error('❌ [Gemini Error]: GEMINI_API_KEY not found in environment');
     return null;
   }
-  return new GoogleGenerativeAI(apiKey);
+  return new GoogleGenerativeAI(cleanKey);
 };
 
-// Safe JSON Extraction (Handles markdown code blocks and raw JSON structures)
-const extractCleanJSON = (rawText) => {
+// Safe JSON Extractor
+const extractJSON = (rawText) => {
+  if (!rawText) throw new Error('Empty text received from model');
+  const clean = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
   try {
-    return JSON.parse(rawText);
-  } catch (initialErr) {
-    const jsonMatch = rawText.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    throw new Error(`JSON extraction failed: ${initialErr.message}`);
+    return JSON.parse(clean);
+  } catch (err) {
+    const match = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+    if (match) return JSON.parse(match[0]);
+    throw err;
   }
 };
 
-// Heuristic Anti-Cheat & Transcript Sanity Checker
-const auditTranscriptQuality = (questionText = '', answerText = '') => {
-  const cleanQ = questionText.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
-  const cleanA = (answerText || '').toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
-  const words = cleanA.split(/\s+/).filter(Boolean);
+// Anti-Cheat & Copy-Paste Inspector
+const auditAnswer = (questionText = '', answerText = '') => {
+  const qClean = questionText.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
+  const aClean = (answerText || '').toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
+  const words = aClean.split(/\s+/).filter(Boolean);
 
-  // 1. Empty or virtually empty response
   if (words.length < 4) {
     return {
-      isInvalid: true,
+      invalid: true,
       score: 0,
-      feedback: 'No substantive response recorded (less than 4 words). Expected a detailed technical answer.'
+      feedback: 'Zero Marks: Insufficient answer (less than 4 words provided).'
     };
   }
 
-  // 2. Direct copy-paste / Echoing the question
-  if (cleanA === cleanQ || cleanQ.includes(cleanA) || (cleanA.length > 25 && cleanQ.indexOf(cleanA.slice(0, 25)) !== -1)) {
+  if (aClean === qClean || qClean.includes(aClean) || (aClean.length > 20 && qClean.indexOf(aClean.slice(0, 20)) !== -1)) {
     return {
-      isInvalid: true,
+      invalid: true,
       score: 0,
-      feedback: 'Severe Anti-Pattern: Candidate copied or echoed the interview question rather than answering it.'
+      feedback: 'Zero Marks: Question was echoed or copy-pasted instead of answering.'
     };
   }
 
-  // 3. Keyword parroting check
-  const qWordSet = new Set(cleanQ.split(/\s+/).filter(w => w.length > 3));
-  const substantiveAnswerWords = words.filter(w => w.length > 3);
-  if (qWordSet.size > 0 && substantiveAnswerWords.length > 0) {
-    const matchingWords = substantiveAnswerWords.filter(w => qWordSet.has(w)).length;
-    const parrotRatio = matchingWords / substantiveAnswerWords.length;
-    if (parrotRatio > 0.85 && substantiveAnswerWords.length <= qWordSet.size + 2) {
-      return {
-        isInvalid: true,
-        score: 0,
-        feedback: 'Anti-Pattern Detected: Response merely rearranged question keywords without providing a technical solution.'
-      };
-    }
-  }
-
-  return { isInvalid: false };
+  return { invalid: false };
 };
+
+// ⚡ Google recommended active model list
+const ACTIVE_MODELS = ['gemini-3.6-flash', 'gemini-2.5-flash'];
 
 // 1. Generate Interview Questions
 export const generateInterviewQuestions = async ({
   targetRole,
   targetCompany,
   experienceLevel,
-  currentRole,
   techStack
 }) => {
-  const formattedTechStack = Array.isArray(techStack) ? techStack.join(', ') : (techStack || 'Software Engineering');
-  const genAI = getGenAIClient();
+  const formattedStack = Array.isArray(techStack) ? techStack.join(', ') : (techStack || 'Engineering');
+  const genAI = getGeminiClient();
 
   if (genAI) {
-    const modelsToTry = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
-
-    for (const modelName of modelsToTry) {
+    for (const modelName of ACTIVE_MODELS) {
       try {
+        console.log(`🤖 Generating questions with ${modelName}...`);
         const model = genAI.getGenerativeModel({
           model: modelName,
-          generationConfig: { 
-            responseMimeType: 'application/json',
-            temperature: 0.7 
+          generationConfig: {
+            temperature: 0.7,
+            responseMimeType: 'application/json'
           }
         });
 
         const prompt = `
-You are an expert technical interviewer at ${targetCompany || 'Tier-1 Tech Companies'}.
-Generate exactly 5 targeted, highly relevant interview questions for:
-- Target Role: ${targetRole}
-- Experience Level: ${experienceLevel}
-- Core Tech Stack: ${formattedTechStack}
-- Candidate Background: ${currentRole || 'Not specified'}
+You are a Staff Technical Interviewer for ${targetRole} (${experienceLevel}) at ${targetCompany || 'Top Tech'}.
+Tech Stack: ${formattedStack}
 
-Requirements:
-1. Questions must specifically test hands-on architectural, algorithmic, and debugging challenges in ${formattedTechStack}.
-2. Categorize them strictly into: 'Technical', 'System Design', 'Behavioral / STAR', 'Problem Solving', or 'Security'.
-3. Do not ask generic or trivial questions.
+Generate exactly 5 distinct, high-impact technical interview questions testing real-world architectural trade-offs, debugging, and system flow in ${formattedStack}.
 
-Return ONLY a JSON array matching this exact schema:
+Return ONLY a JSON array matching:
 [
   {
     "questionId": "q1",
-    "questionText": "Detailed question prompt",
+    "questionText": "Question text here",
     "category": "Technical"
   }
 ]
         `;
 
         const result = await model.generateContent(prompt);
-        const text = result.response.text();
-        const parsed = extractCleanJSON(text);
-
+        const parsed = extractJSON(result.response.text());
         if (Array.isArray(parsed) && parsed.length >= 3) {
-          return parsed.map((item, idx) => ({
-            questionId: item.questionId || `q${idx + 1}`,
-            questionText: item.questionText,
-            category: item.category || 'Technical'
+          console.log(`✅ Questions generated successfully via ${modelName}`);
+          return parsed.map((q, idx) => ({
+            questionId: q.questionId || `q${idx + 1}`,
+            questionText: q.questionText,
+            category: q.category || 'Technical'
           }));
         }
       } catch (err) {
@@ -144,190 +107,170 @@ Return ONLY a JSON array matching this exact schema:
     }
   }
 
-  // Realistic Fallback Generator (Tailored to the user's role and stack)
-  console.warn('⚡ Using dynamic fallback question compilation');
-  const stackList = Array.isArray(techStack) ? techStack : [techStack];
-  const primary = stackList[0] || 'Core Architecture';
-  const secondary = stackList[1] || 'Distributed Systems';
-
+  // Backup fallback
+  console.warn('⚡ Using dynamic fallback questions');
+  const stack = Array.isArray(techStack) ? techStack : [techStack || 'Web Technologies'];
   return [
     {
       questionId: 'q1',
-      questionText: `Explain how state hydration, lifecycle management, and rendering pipelines are optimized in production ${primary}.`,
+      questionText: `Explain internal memory management, lifecycle stages, and rendering optimizations in ${stack[0]}.`,
       category: 'Technical'
     },
     {
       questionId: 'q2',
-      questionText: `Walk me through how you design an idempotent API endpoint or webhook receiver that handles duplicate deliveries safely.`,
+      questionText: `How would you architect a resilient, idempotent service for ${targetRole} to prevent duplicate transactions?`,
       category: 'System Design'
     },
     {
       questionId: 'q3',
-      questionText: `Describe a scenario where you diagnosed an asynchronous race condition or memory leak when integrating ${secondary}.`,
+      questionText: `Walk me through a production race condition or latency issue you diagnosed. What specific metrics did you analyze?`,
       category: 'Problem Solving'
     },
     {
       questionId: 'q4',
-      questionText: `How do you handle JWT refresh token rotation, CORS pre-flight constraints, and secure header configurations in a full-stack architecture?`,
+      questionText: `How do you implement JWT rotation, CORS boundaries, and secure HTTP-only configurations in production?`,
       category: 'Security'
     },
     {
       questionId: 'q5',
-      questionText: `Tell me about a tight technical deadline where you made deliberate engineering trade-offs under high pressure. Apply the STAR method.`,
+      questionText: `Describe a scenario where you negotiated technical debt under high-pressure delivery timelines. Apply STAR.`,
       category: 'Behavioral / STAR'
     }
   ];
 };
 
-// 2. Evaluate Interview Answers with Strict Anti-Cheat
+// 2. Evaluate Interview Answers
 export const evaluateInterview = async ({ targetRole, experienceLevel, techStack, transcripts = [] }) => {
-  const formattedTechStack = Array.isArray(techStack) ? techStack.join(', ') : (techStack || 'Engineering');
+  const formattedStack = Array.isArray(techStack) ? techStack.join(', ') : (techStack || 'Engineering');
   
-  // Step 1: Pre-Audit each answer before AI evaluation
-  const preAuditedEvaluations = [];
-  const validForAiTranscripts = [];
+  const cheatedEvals = [];
+  const validTranscripts = [];
 
   for (const item of transcripts) {
-    const audit = auditTranscriptQuality(item.questionText, item.userAnswerText);
-    if (audit.isInvalid) {
-      preAuditedEvaluations.push({
+    const audit = auditAnswer(item.questionText, item.userAnswerText);
+    if (audit.invalid) {
+      cheatedEvals.push({
         questionId: item.questionId,
-        scorePercentage: audit.score,
+        scorePercentage: 0,
         feedback: audit.feedback,
-        idealAnswer: 'Candidate must provide a structured answer explaining the problem context, execution steps, and quantifiable results.'
+        idealAnswer: 'Candidate must provide a concrete answer following the STAR framework.'
       });
     } else {
-      validForAiTranscripts.push(item);
+      validTranscripts.push(item);
     }
   }
 
-  // If candidate cheated/echoed on ALL questions, reject immediately with 0
-  if (validForAiTranscripts.length === 0) {
+  if (validTranscripts.length === 0) {
     return {
       overallScorePercentage: 0,
       overallScore: 0,
-      summary: 'Evaluation Rejected: Candidate provided zero substantive answers, echoed questions, or entered invalid transcripts.',
-      feedback: 'Every response submitted was either empty, under the minimum required threshold, or a duplicate of the question.',
-      evaluations: preAuditedEvaluations,
+      summary: 'Evaluation Rejected: All submissions were flagged as empty or copied prompts.',
+      feedback: 'Every response submitted was either under 4 words or a duplicate of the question.',
+      evaluations: cheatedEvals,
       strengths: [],
       improvements: [
-        'Answer the actual technical question instead of copying the prompt.',
-        'Apply the STAR framework: Situation, Task, Action, Result.',
-        'Include measurable metrics and specific API/architectural trade-offs.'
+        'Do not copy the interview prompt.',
+        'Use the STAR structure (Situation, Task, Action, Result).',
+        'State exact architectural trade-offs and code solutions.'
       ]
     };
   }
 
-  const genAI = getGenAIClient();
+  const genAI = getGeminiClient();
 
   if (genAI) {
-    const modelsToTry = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
-
-    for (const modelName of modelsToTry) {
+    for (const modelName of ACTIVE_MODELS) {
       try {
+        console.log(`🤖 Evaluating answers with ${modelName}...`);
         const model = genAI.getGenerativeModel({
           model: modelName,
-          generationConfig: { 
-            responseMimeType: 'application/json',
-            temperature: 0.2 // Low temperature for deterministic, strict scoring
+          generationConfig: {
+            temperature: 0.1,
+            responseMimeType: 'application/json'
           }
         });
 
         const prompt = `
-You are a senior hiring committee evaluator at a top-tier technology company.
-Strictly audit this technical mock interview:
-- Target Role: ${targetRole} (${experienceLevel})
-- Calibrated Tech Stack: ${formattedTechStack}
-- Candidate Submissions:
-${JSON.stringify(validForAiTranscripts, null, 2)}
+You are an expert technical evaluator reviewing a candidate for ${targetRole} (${experienceLevel}).
+Tech Stack: ${formattedStack}
 
-Strict Grading Rules:
-1. ZERO TOLERANCE FOR FLUFF: If the candidate gives vague, hand-waving explanations without technical depth, award less than 35 points.
-2. STAR COMPLIANCE: Rate whether behavioral answers cover Situation, Task, Action, Result.
-3. SCORING SCALE:
-   - 80-100: Exceptional, production-ready depth with exact syntax/trade-offs.
-   - 50-79: Basic understanding, missing edge cases or optimizations.
-   - 0-49: Incomplete, incorrect, off-topic, or trivial answers.
-4. Calculate 'overallScorePercentage' strictly as the mathematical average of all question scores.
+Candidate Responses:
+${JSON.stringify(validTranscripts, null, 2)}
 
-Return ONLY a valid JSON object matching this schema:
+Scoring Guidelines:
+1. Strict grading: Vague or hand-waving explanations must score below 40%.
+2. Score based on technical depth, trade-offs, and STAR structure.
+
+Return ONLY a JSON object:
 {
-  "overallScorePercentage": 75,
-  "summary": "Concise executive evaluation of the candidate's performance",
+  "summary": "Executive summary of strengths and weaknesses",
   "evaluations": [
     {
       "questionId": "q1",
       "scorePercentage": 75,
-      "feedback": "Specific critique detailing technical flaws and strong points",
-      "idealAnswer": "Exemplary model answer showing how a Staff Engineer would structure the response using STAR"
+      "feedback": "Critique detailing exact flaws and positives",
+      "idealAnswer": "Exemplary Staff-level answer using STAR"
     }
   ],
-  "strengths": ["List of 2-3 genuine engineering strengths verified in the response"],
-  "improvements": ["List of 2-3 specific anti-patterns or gaps identified"]
+  "strengths": ["Strength 1", "Strength 2"],
+  "improvements": ["Improvement 1", "Improvement 2"]
 }
         `;
 
         const result = await model.generateContent(prompt);
-        const text = result.response.text();
-        const parsed = extractCleanJSON(text);
+        const parsed = extractJSON(result.response.text());
 
         if (parsed && Array.isArray(parsed.evaluations)) {
-          // Merge pre-audited failures with AI evaluations
-          const combinedEvaluations = [...parsed.evaluations, ...preAuditedEvaluations];
-          
-          // Re-calculate true mathematical average across all questions
-          const totalScore = combinedEvaluations.reduce((sum, item) => sum + (Number(item.scorePercentage) || 0), 0);
-          const finalAverage = Math.round(totalScore / combinedEvaluations.length);
+          const combined = [...parsed.evaluations, ...cheatedEvals];
+          const total = combined.reduce((acc, curr) => acc + (Number(curr.scorePercentage) || 0), 0);
+          const average = Math.round(total / combined.length);
 
           return {
-            overallScorePercentage: finalAverage,
-            overallScore: finalAverage,
-            summary: finalAverage < 40 ? 'Performance flagged: Significant gaps in technical depth and articulation.' : parsed.summary,
+            overallScorePercentage: average,
+            overallScore: average,
+            summary: average < 40 ? 'Significant technical gaps identified.' : parsed.summary,
             feedback: parsed.summary,
-            evaluations: combinedEvaluations,
-            strengths: finalAverage < 40 ? [] : (parsed.strengths || []),
-            improvements: parsed.improvements || ['Improve technical terminology and quantification of engineering impact.']
+            evaluations: combined,
+            strengths: average < 40 ? [] : (parsed.strengths || []),
+            improvements: parsed.improvements || ['Improve technical depth and metrics.']
           };
         }
       } catch (err) {
-        console.error(`🔥 [Gemini Error on ${modelName} - Evaluation]:`, err.message);
+        console.error(`🔥 [Gemini Evaluation Error on ${modelName}]:`, err.message);
       }
     }
   }
 
-  // Realistic Fallback (No free passes: grades based on real word length & anti-cheat)
-  console.warn('⚡ Using heuristic fallback evaluation');
-  const fallbackEvaluations = transcripts.map((t, idx) => {
-    const audit = auditTranscriptQuality(t.questionText, t.userAnswerText);
-    if (audit.isInvalid) {
+  // Fallback if AI unreachable
+  const fallbackEvals = transcripts.map((t) => {
+    const audit = auditAnswer(t.questionText, t.userAnswerText);
+    if (audit.invalid) {
       return {
-        questionId: t.questionId || `q${idx + 1}`,
+        questionId: t.questionId,
         scorePercentage: 0,
         feedback: audit.feedback,
-        idealAnswer: 'Provide a structured, concrete solution with domain trade-offs.'
+        idealAnswer: 'Provide a structured solution detailing system trade-offs.'
       };
     }
-
-    const wordCount = (t.userAnswerText || '').trim().split(/\s+/).length;
-    const calcScore = wordCount < 20 ? 30 : wordCount < 50 ? 55 : 70;
-
+    const words = (t.userAnswerText || '').trim().split(/\s+/).length;
+    const score = words < 15 ? 20 : words < 40 ? 45 : 65;
     return {
-      questionId: t.questionId || `q${idx + 1}`,
-      scorePercentage: calcScore,
-      feedback: calcScore < 50 ? 'Answer lacks architectural depth and measurable outcomes.' : 'Solid foundational response. Detail edge cases for a higher score.',
-      idealAnswer: 'A high-impact response applying the STAR framework with concrete system metrics.'
+      questionId: t.questionId,
+      scorePercentage: score,
+      feedback: score < 40 ? 'Answer lacks sufficient depth.' : 'Good baseline. Add edge cases.',
+      idealAnswer: 'Detailed STAR answer mentioning failure modes.'
     };
   });
 
-  const avg = Math.round(fallbackEvaluations.reduce((acc, curr) => acc + curr.scorePercentage, 0) / (fallbackEvaluations.length || 1));
+  const avg = Math.round(fallbackEvals.reduce((a, b) => a + b.scorePercentage, 0) / (fallbackEvals.length || 1));
 
   return {
     overallScorePercentage: avg,
     overallScore: avg,
-    summary: avg < 50 ? 'Candidate struggled to articulate comprehensive technical solutions.' : 'Acceptable foundational responses with areas for architectural improvement.',
-    feedback: 'Evaluated via fallback heuristics due to gateway latency.',
-    evaluations: fallbackEvaluations,
-    strengths: avg >= 60 ? ['Clear verbal baseline'] : [],
-    improvements: ['Include quantifiable metrics', 'Avoid copying question prompts', 'Explain failure scenarios']
+    summary: avg < 40 ? 'Candidate struggled to articulate technical solutions.' : 'Acceptable foundational responses.',
+    feedback: 'Evaluated via strict heuristics.',
+    evaluations: fallbackEvals,
+    strengths: avg >= 60 ? ['Acceptable communication baseline'] : [],
+    improvements: ['Do not copy question prompts', 'Detail technical trade-offs']
   };
 };
