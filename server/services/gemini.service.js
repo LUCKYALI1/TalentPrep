@@ -1,6 +1,14 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
-dotenv.config();
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Ye current folder aur server folder dono ke .env ko dhoondh lega
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 // Dynamic API Key Sanitizer (Trims spaces and strips accidental surrounding quotes)
 const getSanitizedApiKey = () => {
