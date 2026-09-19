@@ -2,62 +2,94 @@ import mongoose from 'mongoose';
 import Interview from '../models/interview.model.js';
 import { generateInterviewQuestions, evaluateInterview } from '../services/gemini.service.js';
 
+// Safe User ID Extractor & Query Builder (Prevents ObjectId vs String mismatches)
+const buildUserQuery = (req) => {
+  const rawId = req.user?._id || req.user?.id || req.user?.userId || req.userId;
+  if (!rawId) return null;
+
+  if (mongoose.Types.ObjectId.isValid(rawId)) {
+    const objId = new mongoose.Types.ObjectId(rawId);
+    return { $in: [objId, String(rawId)] };
+  }
+  return rawId;
+};
+
+// 1. Check for Active / Unfinished Session in Queue
 export const checkActiveInterview = async (req, res) => {
   try {
-    const userId = req.user?._id || req.user?.id || req.userId;
-    if (!userId) {
-      return res.status(401).json({ message: 'Unauthorized session' });
+    const userQuery = buildUserQuery(req);
+    if (!userQuery) {
+      return res.status(401).json({ success: false, message: 'Unauthorized session' });
     }
 
+    // Finds any session currently in PENDING or IN_PROGRESS state
     const activeInterview = await Interview.findOne({
-      userId,
+      userId: userQuery,
       status: { $in: ['PENDING', 'IN_PROGRESS'] }
     }).sort({ createdAt: -1 });
 
-    return res.status(200).json({ hasActive: !!activeInterview, activeInterview });
+    return res.status(200).json({ 
+      success: true,
+      hasActive: Boolean(activeInterview), 
+      activeInterview: activeInterview || null 
+    });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to verify active session', error: error.message });
+    console.error('❌ [checkActiveInterview Error]:', error);
+    return res.status(500).json({ success: false, message: 'Failed to verify active session', error: error.message });
   }
 };
 
+// 2. Archive Current Active Session to Allow Fresh Setup
 export const archiveActiveInterview = async (req, res) => {
   try {
-    const userId = req.user?._id || req.user?.id || req.userId;
-    await Interview.updateMany(
-      { userId, status: { $in: ['PENDING', 'IN_PROGRESS'] } },
+    const userQuery = buildUserQuery(req);
+    if (!userQuery) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const result = await Interview.updateMany(
+      { userId: userQuery, status: { $in: ['PENDING', 'IN_PROGRESS'] } },
       { $set: { status: 'ARCHIVED' } }
     );
-    return res.status(200).json({ message: 'Previous session moved to queue' });
+
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Active sessions successfully archived',
+      modifiedCount: result.modifiedCount 
+    });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to queue session', error: error.message });
+    console.error('❌ [archiveActiveInterview Error]:', error);
+    return res.status(500).json({ success: false, message: 'Failed to archive active sessions', error: error.message });
   }
 };
 
+// 3. Create New Interview Session
 export const createInterview = async (req, res) => {
   try {
-    const userId = req.user?._id || req.user?.id || req.userId;
-
-    if (!userId) {
-      return res.status(401).json({ message: 'User authentication required. Please login again.' });
+    const rawUserId = req.user?._id || req.user?.id || req.user?.userId || req.userId;
+    if (!rawUserId) {
+      return res.status(401).json({ success: false, message: 'User authentication required. Please log in again.' });
     }
 
     const { targetRole, targetCompany, experienceLevel, currentRole, techStack } = req.body;
 
     if (!targetRole || !techStack) {
-      return res.status(400).json({ message: 'Target role and tech stack are required.' });
+      return res.status(400).json({ success: false, message: 'Target role and tech stack are required.' });
     }
 
     const parsedTechStack = Array.isArray(techStack)
       ? techStack
       : (typeof techStack === 'string' ? techStack.split(',').map(s => s.trim()).filter(Boolean) : []);
 
-    // 1. Move old active sessions to archived
+    const userQuery = buildUserQuery(req);
+
+    // Archive any existing active sessions so only one session remains live
     await Interview.updateMany(
-      { userId, status: { $in: ['PENDING', 'IN_PROGRESS'] } },
+      { userId: userQuery, status: { $in: ['PENDING', 'IN_PROGRESS'] } },
       { $set: { status: 'ARCHIVED' } }
     );
 
-    // 2. Generate questions (Gemini + Auto-Fallback)
+    // Generate real questions via Gemini API
     const questions = await generateInterviewQuestions({
       targetRole,
       targetCompany,
@@ -66,14 +98,18 @@ export const createInterview = async (req, res) => {
       techStack: parsedTechStack
     });
 
-    // 3. Save session
+    // Save session with a guaranteed ObjectId userId
+    const safeUserId = mongoose.Types.ObjectId.isValid(rawUserId) 
+      ? new mongoose.Types.ObjectId(rawUserId) 
+      : rawUserId;
+
     const newInterview = await Interview.create({
-      userId,
+      userId: safeUserId,
       targetRole,
       targetCompany: targetCompany || 'General Tech',
-      experienceLevel,
+      experienceLevel: experienceLevel || 'Entry Level',
       currentRole: currentRole || 'Candidate',
-      techStack: parsedTechStack,
+      techStack: parsedTechStack.length > 0 ? parsedTechStack : ['General Engineering'],
       questions,
       status: 'IN_PROGRESS'
     });
@@ -85,33 +121,35 @@ export const createInterview = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ [createInterview Catch]:', error.message);
+    console.error('❌ [createInterview Error]:', error);
     return res.status(500).json({
-      message: error.message || 'Error creating interview session',
-      error: error.message
+      success: false,
+      message: error.message || 'Error creating interview session'
     });
   }
 };
 
+// 4. Submit & Score Interview
 export const submitAndEvaluateInterview = async (req, res) => {
   try {
     const { id } = req.params;
     const { transcripts } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid interview ID format.' });
+      return res.status(400).json({ success: false, message: 'Invalid interview ID format.' });
     }
 
     const interview = await Interview.findById(id);
     if (!interview) {
-      return res.status(404).json({ message: 'Interview session not found' });
+      return res.status(404).json({ success: false, message: 'Interview session not found.' });
     }
 
+    // Call evaluation engine
     const evaluation = await evaluateInterview({
       targetRole: interview.targetRole,
       experienceLevel: interview.experienceLevel,
       techStack: interview.techStack,
-      transcripts
+      transcripts: transcripts || []
     });
 
     interview.transcripts = transcripts;
@@ -125,18 +163,19 @@ export const submitAndEvaluateInterview = async (req, res) => {
       evaluation
     });
   } catch (error) {
-    console.error('❌ [submitAndEvaluateInterview Catch]:', error.message);
-    return res.status(500).json({ message: 'Failed to evaluate interview', error: error.message });
+    console.error('❌ [submitAndEvaluateInterview Error]:', error);
+    return res.status(500).json({ success: false, message: 'Failed to evaluate interview', error: error.message });
   }
 };
 
+// 5. Get Analytics
 export const getInterviewAnalytics = async (req, res) => {
   try {
-    const userId = req.user?._id || req.user?.id || req.userId;
-    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const userQuery = buildUserQuery(req);
+    if (!userQuery) return res.status(401).json({ message: 'Unauthorized' });
 
     const interviews = await Interview.find({ 
-      userId, 
+      userId: userQuery, 
       status: 'COMPLETED' 
     }).sort({ createdAt: 1 });
 
@@ -162,7 +201,6 @@ export const getInterviewAnalytics = async (req, res) => {
       role: inv.targetRole
     }));
 
-    // Pass the full 24-character _id for database operations
     const recentInterviews = interviews.slice(-10).reverse().map(inv => ({
       _id: inv._id.toString(),
       id: inv._id.toString(),
@@ -188,16 +226,17 @@ export const getInterviewAnalytics = async (req, res) => {
   }
 };
 
+// 6. Get Interview by ID
 export const getInterviewById = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user?._id || req.user?.id || req.userId;
+    const userQuery = buildUserQuery(req);
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid interview ID format.' });
     }
 
-    const interview = await Interview.findOne({ _id: id, userId });
+    const interview = await Interview.findOne({ _id: id, userId: userQuery });
     if (!interview) {
       return res.status(404).json({ message: 'Interview record not found or access denied.' });
     }

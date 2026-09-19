@@ -11,6 +11,7 @@ import Footer from './pages/Footer.jsx'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Pricing from './pages/Pricing' 
+import NotFound from './pages/NotFound.jsx'
 
 // Layout Modules Shell Imports
 import InterviewLayout from './layouts/Interview.layout.jsx'
@@ -102,7 +103,7 @@ function App() {
               <Route path="user-data-info" element={<Account />} />
             </Route>
 
-            <Route path="*" element={<div className="p-8 text-red-400 font-mono"><h1>404 Pipeline Not Found</h1></div>} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
       </LastLocationProvider>
