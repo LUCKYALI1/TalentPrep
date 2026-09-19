@@ -43,13 +43,13 @@ function Settings() {
   );
 
   const [profileForm, setProfileForm] = useState({
-    firstName: user?.firstName || 'Lucky',
-    lastName: user?.lastName || 'Ali',
-    email: user?.email || 'lucky.ali@example.com',
+    firstName: user?.firstName || 'Iron',
+    lastName: user?.lastName || 'Man',
+    email: user?.email || 'iron.man@example.com',
     title: user?.title || 'Full-Stack & Machine Learning Engineer',
-    location: user?.location || 'Ghaziabad / NCR, India',
+    location: user?.location || 'San Francisco, CA',
     degree: user?.degree || 'B.Tech in Computer Science (AI & ML)',
-    institution: user?.institution || 'ABES Engineering College',
+    institution: user?.institution || 'MIT University',
     graduationYear: user?.graduationYear || '2026',
     bio: user?.bio || 'Software engineer specializing in high-throughput backend systems, distributed architectures, and AI integrations.',
     skills: user?.skills ? (Array.isArray(user.skills) ? user.skills.join(', ') : user.skills) : 'React, Next.js, Node.js, TypeScript, Python, SQL',

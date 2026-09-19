@@ -43,9 +43,9 @@ function Account() {
   };
 
   const accountInfo = {
-    fullName: accountData?.fullName || (user?.firstName ? `${user.firstName} ${user?.lastName || ''}`.trim() : 'Lucky Ali'),
-    username: accountData?.username || user?.username || 'lucky_ali_dev',
-    email: accountData?.email || user?.email || 'lucky.ali@example.com',
+    fullName: accountData?.fullName || (user?.firstName ? `${user.firstName} ${user?.lastName || ''}`.trim() : ' iron man'),
+    username: accountData?.username || user?.username || 'ironman',
+    email: accountData?.email || user?.email || 'iron.man@example.com',
     memberSince: accountData?.memberSince
       ? new Date(accountData.memberSince).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
       : (user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'September 2025'),

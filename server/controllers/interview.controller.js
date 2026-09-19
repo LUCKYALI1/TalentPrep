@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Interview from '../models/interview.model.js';
+import User from '../models/user.model.js'; // ⚡ Required for credit tracking
 import { generateInterviewQuestions, evaluateInterview } from '../services/gemini.service.js';
 
 // Safe User ID Extractor & Query Builder (Prevents ObjectId vs String mismatches)
@@ -22,7 +23,6 @@ export const checkActiveInterview = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Unauthorized session' });
     }
 
-    // Finds any session currently in PENDING or IN_PROGRESS state
     const activeInterview = await Interview.findOne({
       userId: userQuery,
       status: { $in: ['PENDING', 'IN_PROGRESS'] }
@@ -63,19 +63,41 @@ export const archiveActiveInterview = async (req, res) => {
   }
 };
 
-// 3. Create New Interview Session
+// 3. Create New Interview Session (With Atomic Credit Deduction)
 export const createInterview = async (req, res) => {
-  try {
-    const rawUserId = req.user?._id || req.user?.id || req.user?.userId || req.userId;
-    if (!rawUserId) {
-      return res.status(401).json({ success: false, message: 'User authentication required. Please log in again.' });
-    }
+  const rawUserId = req.user?._id || req.user?.id || req.user?.userId || req.userId;
+  if (!rawUserId) {
+    return res.status(401).json({ success: false, message: 'User authentication required. Please log in again.' });
+  }
 
+  const safeUserId = mongoose.Types.ObjectId.isValid(rawUserId) 
+    ? new mongoose.Types.ObjectId(rawUserId) 
+    : rawUserId;
+
+  let creditDeducted = false;
+
+  try {
     const { targetRole, targetCompany, experienceLevel, currentRole, techStack } = req.body;
 
     if (!targetRole || !techStack) {
       return res.status(400).json({ success: false, message: 'Target role and tech stack are required.' });
     }
+
+    // ⚡ Step 1: Atomic Credit Verification & Decrement
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: safeUserId, credits: { $gt: 0 } },
+      { $inc: { credits: -1 } },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(403).json({
+        success: false,
+        message: 'Insufficient credits. Please top up your account to start a mock interview.'
+      });
+    }
+
+    creditDeducted = true;
 
     const parsedTechStack = Array.isArray(techStack)
       ? techStack
@@ -83,13 +105,13 @@ export const createInterview = async (req, res) => {
 
     const userQuery = buildUserQuery(req);
 
-    // Archive any existing active sessions so only one session remains live
+    // ⚡ Step 2: Archive any lingering pending/in-progress sessions
     await Interview.updateMany(
       { userId: userQuery, status: { $in: ['PENDING', 'IN_PROGRESS'] } },
       { $set: { status: 'ARCHIVED' } }
     );
 
-    // Generate real questions via Gemini API
+    // ⚡ Step 3: Generate Questions via Gemini API
     const questions = await generateInterviewQuestions({
       targetRole,
       targetCompany,
@@ -98,11 +120,7 @@ export const createInterview = async (req, res) => {
       techStack: parsedTechStack
     });
 
-    // Save session with a guaranteed ObjectId userId
-    const safeUserId = mongoose.Types.ObjectId.isValid(rawUserId) 
-      ? new mongoose.Types.ObjectId(rawUserId) 
-      : rawUserId;
-
+    // ⚡ Step 4: Persist the Interview Session
     const newInterview = await Interview.create({
       userId: safeUserId,
       targetRole,
@@ -114,14 +132,27 @@ export const createInterview = async (req, res) => {
       status: 'IN_PROGRESS'
     });
 
+    // Return the updated balance so the client can update context immediately
     return res.status(201).json({
       success: true,
       interviewId: newInterview._id,
-      questions: newInterview.questions
+      questions: newInterview.questions,
+      credits: updatedUser.credits
     });
 
   } catch (error) {
     console.error('❌ [createInterview Error]:', error);
+
+    // ⚡ Safety Rollback: If credit was deducted but interview creation failed, refund it
+    if (creditDeducted) {
+      try {
+        await User.findByIdAndUpdate(safeUserId, { $inc: { credits: 1 } });
+        console.log('🔄 [Credit Refunded]: Rolled back 1 credit due to downstream error.');
+      } catch (refundErr) {
+        console.error('Failed to refund credit on error:', refundErr);
+      }
+    }
+
     return res.status(500).json({
       success: false,
       message: error.message || 'Error creating interview session'
@@ -144,7 +175,6 @@ export const submitAndEvaluateInterview = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Interview session not found.' });
     }
 
-    // Call evaluation engine
     const evaluation = await evaluateInterview({
       targetRole: interview.targetRole,
       experienceLevel: interview.experienceLevel,

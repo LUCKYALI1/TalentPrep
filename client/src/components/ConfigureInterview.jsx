@@ -18,10 +18,12 @@ import {
   Radio,
   Plus,
   Briefcase,
-  LogIn
+  LogIn,
+  Coins
 } from 'lucide-react';
 import api from '../utils/api'; 
 import ActiveSessionModal from './ActiveSessionModal';
+import { useUser } from '../context/userContext/UserContext.jsx'; // 👈 Credit & User Context hook
 
 const ROLE_PRESETS = [
   'Full-Stack Engineer',
@@ -72,6 +74,10 @@ const EXPERIENCE_TIERS = [
 
 export default function ConfigureInterview({ onSubmit, isSubmitting: parentSubmitting }) {
   const navigate = useNavigate();
+  const { user, credits: ctxCredits, deductCredit, fetchUserData } = useUser();
+
+  const userCredits = ctxCredits !== undefined ? ctxCredits : (user?.credits ?? 0);
+  const hasCredits = userCredits > 0;
 
   const [formData, setFormData] = useState({
     targetRole: 'Full-Stack Engineer',
@@ -184,19 +190,33 @@ export default function ConfigureInterview({ onSubmit, isSubmitting: parentSubmi
       return;
     }
 
+    // Pre-flight client credit check
+    if (!hasCredits) {
+      setError('Insufficient credits. You need at least 1 credit to initialize an interview.');
+      setIsAuthError(false);
+      return;
+    }
+
     setLoading(true);
     setError('');
     setIsAuthError(false);
 
     try {
-      // Direct Authorization header guarantees delivery
+      // 1. Post request with explicit Authorization header
       const res = await api.post('/interview/create', formData, {
         headers: {
           Authorization: `Bearer ${token.trim()}`
         }
       });
 
-      // Notify parent modal if handler was passed
+      // 2. ⚡ DEDUCT CREDIT IN CONTEXT (Instant UI sync across Navbar and Dashboard)
+      if (deductCredit) {
+        deductCredit(1, res.data?.credits ?? null);
+      } else if (fetchUserData) {
+        fetchUserData();
+      }
+
+      // 3. Notify parent modal if handler was passed
       if (onSubmit) {
         await onSubmit(formData, res.data);
       }
@@ -211,6 +231,11 @@ export default function ConfigureInterview({ onSubmit, isSubmitting: parentSubmi
       if (err.response?.status === 401) {
         setError('Authorization denied: Session expired or token invalid. Please log in again.');
         setIsAuthError(true);
+        return;
+      }
+
+      if (err.response?.status === 403) {
+        setError('Insufficient credits. Please top up your account to proceed.');
         return;
       }
 
@@ -271,11 +296,26 @@ export default function ConfigureInterview({ onSubmit, isSubmitting: parentSubmi
         </div>
 
         <div className="flex items-center gap-2.5 sm:gap-3 text-[11px] self-start sm:self-auto">
+          {/* Credit Telemetry Badge */}
+          <Link
+            to="/pricing"
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${
+              hasCredits
+                ? 'bg-cyan-950/40 border-cyan-800/60 text-cyan-300 hover:border-cyan-400'
+                : 'bg-rose-950/50 border-rose-800/60 text-rose-300 hover:border-rose-400 animate-pulse'
+            }`}
+            title="Click to top up credits"
+          >
+            <Coins className="w-3 h-3" />
+            <span>
+              {userCredits} <span className="text-[9px] opacity-80">CREDIT{userCredits !== 1 ? 'S' : ''}</span>
+            </span>
+          </Link>
+
           <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/40 border border-emerald-900/60 text-emerald-400">
             <Radio className="w-3 h-3 animate-pulse" />
-            <span>INFERENCE_CLUSTER_ONLINE</span>
+            <span>INFERENCE_ONLINE</span>
           </span>
-          <span className="text-zinc-500 hidden lg:inline font-mono">MODEL: GEMINI-1.5</span>
         </div>
       </div>
 
@@ -293,7 +333,7 @@ export default function ConfigureInterview({ onSubmit, isSubmitting: parentSubmi
               <span>{error}</span>
             </div>
             <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-              {isAuthError && (
+              {isAuthError ? (
                 <Link
                   to="/login"
                   className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-900/80 hover:bg-red-800 text-white text-[11px] font-mono border border-red-700 transition-all cursor-pointer"
@@ -301,7 +341,16 @@ export default function ConfigureInterview({ onSubmit, isSubmitting: parentSubmi
                   <LogIn className="w-3 h-3" />
                   <span>Log In Now</span>
                 </Link>
-              )}
+              ) : !hasCredits ? (
+                <Link
+                  to="/pricing"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-black text-[11px] font-mono font-bold transition-all cursor-pointer shadow-md"
+                >
+                  <Coins className="w-3 h-3" />
+                  <span>Buy Credits</span>
+                </Link>
+              ) : null}
+
               <button 
                 onClick={() => { setError(''); setIsAuthError(false); }} 
                 className="p-1 text-red-400 hover:text-red-200 transition cursor-pointer"
@@ -340,7 +389,7 @@ export default function ConfigureInterview({ onSubmit, isSubmitting: parentSubmi
                 </span>
               </div>
               <p className="text-xs text-zinc-400 leading-relaxed font-mono">
-                Define your target role persona, seniority benchmarks, and technical focus areas.
+                Define your target role persona, seniority benchmarks, and technical focus areas. Costs 1 Credit per session.
               </p>
             </div>
 
@@ -549,23 +598,34 @@ export default function ConfigureInterview({ onSubmit, isSubmitting: parentSubmi
 
           {/* Submission Action Button */}
           <div className="pt-3 border-t border-zinc-900">
-            <button
-              type="submit"
-              disabled={isExecuting}
-              className="w-full min-h-[46px] py-3 px-6 rounded-xl bg-cyan-400 hover:bg-cyan-300 disabled:opacity-50 text-black font-mono font-bold text-xs sm:text-sm transition-all shadow-[0_0_24px_rgba(34,211,238,0.25)] hover:shadow-[0_0_32px_rgba(34,211,238,0.4)] flex items-center justify-center gap-2 cursor-pointer active:scale-95 duration-200"
-            >
-              {isExecuting ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                  INITIALIZING_INFERENCE_PIPELINE...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2 tracking-wide">
-                  <span>INITIALIZE INTERVIEW PIPELINE</span>
-                  <ArrowRight className="w-4 h-4" />
-                </span>
-              )}
-            </button>
+            {hasCredits ? (
+              <button
+                type="submit"
+                disabled={isExecuting}
+                className="w-full min-h-[46px] py-3 px-6 rounded-xl bg-cyan-400 hover:bg-cyan-300 disabled:opacity-50 text-black font-mono font-bold text-xs sm:text-sm transition-all shadow-[0_0_24px_rgba(34,211,238,0.25)] hover:shadow-[0_0_32px_rgba(34,211,238,0.4)] flex items-center justify-center gap-2 cursor-pointer active:scale-95 duration-200"
+              >
+                {isExecuting ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                    INITIALIZING_INFERENCE_PIPELINE...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2 tracking-wide">
+                    <span>INITIALIZE INTERVIEW (1 CREDIT)</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </span>
+                )}
+              </button>
+            ) : (
+              <Link
+                to="/pricing"
+                className="w-full min-h-[46px] py-3 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-400 hover:from-cyan-400 hover:to-sky-300 text-black font-mono font-bold text-xs sm:text-sm transition-all shadow-[0_0_24px_rgba(6,182,212,0.3)] flex items-center justify-center gap-2 cursor-pointer active:scale-95 duration-200"
+              >
+                <Coins className="w-4 h-4" />
+                <span>BUY CREDITS TO START INTERVIEW</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            )}
           </div>
         </form>
 
@@ -663,16 +723,14 @@ export default function ConfigureInterview({ onSubmit, isSubmitting: parentSubmi
 
               <div className="space-y-1.5 pt-1.5 border-t border-zinc-900 text-[11px] text-zinc-400">
                 <div className="flex justify-between items-center">
-                  <span>Coding & Algorithmic Scenarios</span>
-                  <span className="text-zinc-200 font-semibold">40%</span>
+                  <span>Session Cost</span>
+                  <span className="text-cyan-400 font-mono font-bold">1 Credit</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Architecture & Concurrency</span>
-                  <span className="text-zinc-200 font-semibold">35%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>STAR Behavioral & Conflict</span>
-                  <span className="text-zinc-200 font-semibold">25%</span>
+                  <span>Available Balance</span>
+                  <span className={`font-mono font-bold ${hasCredits ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {userCredits} Credits
+                  </span>
                 </div>
               </div>
 
@@ -682,11 +740,11 @@ export default function ConfigureInterview({ onSubmit, isSubmitting: parentSubmi
             <div className="space-y-1.5 font-mono text-[11px]">
               <div className="flex items-center gap-2 text-zinc-400">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Low-latency speech transcript buffer</span>
+                <span>Atomic credit ledger reconciliation</span>
               </div>
               <div className="flex items-center gap-2 text-zinc-400">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Automated STAR rubric evaluation</span>
+                <span>Instant recovery buffer if generation drops</span>
               </div>
             </div>
 
@@ -696,7 +754,7 @@ export default function ConfigureInterview({ onSubmit, isSubmitting: parentSubmi
           <div className="p-2.5 rounded-xl border border-zinc-800/80 bg-zinc-950 font-mono text-[11px] flex items-center justify-between text-zinc-500 shadow-inner">
             <span className="flex items-center gap-1.5 text-cyan-400">
               <Activity className="w-3.5 h-3.5 animate-pulse" />
-              <span>STREAM_SYNCHRONIZED</span>
+              <span>LEDGER_SYNCHRONIZED</span>
             </span>
             <span>~15 MIN EST. DURATION</span>
           </div>
